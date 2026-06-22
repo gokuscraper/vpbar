@@ -148,7 +148,58 @@ def add_progress_bar(
     Returns:
         True if successful, False otherwise
     """
-    pass
+    input_file = Path(input_path)
+    if not input_file.exists():
+        print(f"Error: Input file not found: {input_path}", file=sys.stderr)
+        return False
+    
+    if output_path is None:
+        output_path = str(input_file.parent / f"{input_file.stem}_with_progress{input_file.suffix}")
+    
+    try:
+        print("Getting video information...")
+        video_info = get_video_info(input_path)
+        
+        duration = video_info['duration']
+        width = video_info['width']
+        height_res = video_info['height']
+        
+        print(f"Video duration: {duration:.2f} seconds")
+        print(f"Video resolution: {width}x{height_res}")
+        
+        print("Generating FFmpeg command...")
+        cmd = generate_ffmpeg_command(
+            input_path=input_path,
+            output_path=output_path,
+            position=position,
+            height=height,
+            bg_color=bg_color,
+            fg_color=fg_color
+        )
+        
+        print("Processing video with FFmpeg...")
+        print(f"Command: {' '.join(cmd)}")
+        
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        
+        if result.returncode != 0:
+            print(f"Error: FFmpeg failed with return code {result.returncode}", file=sys.stderr)
+            if result.stderr:
+                print(f"FFmpeg error: {result.stderr}", file=sys.stderr)
+            return False
+        
+        print(f"Success! Output saved to: {output_path}")
+        return True
+        
+    except FileNotFoundError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return False
+    except RuntimeError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return False
+    except Exception as e:
+        print(f"Unexpected error: {e}", file=sys.stderr)
+        return False
 
 
 def main():
@@ -213,7 +264,7 @@ Examples:
     output_path = args.output
     if output_path is None:
         input_file = Path(input_path)
-        output_path = str(input_file.parent / f"{input_file.stem}_progress{input_file.suffix}")
+        output_path = str(input_file.parent / f"{input_file.stem}_with_progress{input_file.suffix}")
     
     print(f"Input: {input_path}")
     print(f"Output: {output_path}")
