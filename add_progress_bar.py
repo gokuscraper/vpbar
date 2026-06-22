@@ -8,6 +8,31 @@ import sys
 from pathlib import Path
 
 
+def load_config() -> dict:
+    """Load configuration from config.json file.
+    
+    Returns:
+        Dictionary containing configuration parameters
+    """
+    config_path = Path(__file__).parent / "config.json"
+    
+    if config_path.exists():
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Warning: Failed to load config file: {e}", file=sys.stderr)
+    
+    # Default configuration
+    return {
+        "position": "bottom",
+        "height": 5,
+        "bg_color": "808080",
+        "fg_color": "FF0000",
+        "segment_interval": 1
+    }
+
+
 def get_video_info(input_path: str) -> dict:
     """Get video metadata using ffprobe.
     
@@ -88,7 +113,8 @@ def generate_ffmpeg_command(
     position: str,
     height: int,
     bg_color: str,
-    fg_color: str
+    fg_color: str,
+    segment_interval: int = 1
 ) -> list:
     """Generate FFmpeg command for adding progress bar.
     
@@ -146,11 +172,10 @@ def generate_ffmpeg_command(
         f"[bg][bar]overlay=y={y_pos}:x=0"
     )
     
-    # 上面的方法还是不对，让我用最简单可靠的方法
     # 使用 drawbox 的 enable 参数，在不同时间绘制不同宽度的条
+    # 使用配置的 segment_interval 参数
     
-    # 计算需要多少个分段（每秒一段）
-    num_segments = int(duration) + 1
+    num_segments = int(duration / segment_interval) + 1
     drawbox_filters = []
     
     # 底层静态条
@@ -158,8 +183,8 @@ def generate_ffmpeg_command(
     
     # 上层动态条：分段绘制，每段宽度递增
     for i in range(num_segments):
-        start_time = i
-        end_time = i + 1
+        start_time = i * segment_interval
+        end_time = min((i + 1) * segment_interval, duration)
         # 计算这个时间段的进度条宽度
         bar_width = int(width * (end_time / duration))
         if bar_width > 0:
@@ -187,17 +212,19 @@ def add_progress_bar(
     position: str,
     height: int,
     bg_color: str,
-    fg_color: str
+    fg_color: str,
+    segment_interval: int = 1
 ) -> bool:
     """Add progress bar to video using FFmpeg.
     
     Args:
         input_path: Path to the input video file
         output_path: Path to the output video file
-        position: Progress bar position ('top' or 'bottom')
+        position: Progress bar position ('top', 'middle', or 'bottom')
         height: Height of the progress bar in pixels
         bg_color: Background color in hex (e.g., '808080')
         fg_color: Foreground color in hex (e.g., 'FF0000')
+        segment_interval: Interval in seconds for drawing segments (default: 1)
         
     Returns:
         True if successful, False otherwise
@@ -228,7 +255,8 @@ def add_progress_bar(
             position=position,
             height=height,
             bg_color=bg_color,
-            fg_color=fg_color
+            fg_color=fg_color,
+            segment_interval=segment_interval
         )
         
         print("Processing video with FFmpeg...")
@@ -258,6 +286,9 @@ def add_progress_bar(
 
 def main():
     """Main entry point for the CLI tool."""
+    # Load configuration
+    config = load_config()
+    
     parser = argparse.ArgumentParser(
         description="Add a dual-layer progress bar to videos using FFmpeg.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -287,29 +318,36 @@ Examples:
         "-p", "--position",
         type=str,
         choices=["top", "middle", "bottom"],
-        default="bottom",
-        help="Position of the progress bar (default: bottom)"
+        default=config.get("position", "bottom"),
+        help=f"Position of the progress bar (default: {config.get('position', 'bottom')})"
     )
     
     parser.add_argument(
         "--height",
         type=int,
-        default=5,
-        help="Height of the progress bar in pixels (default: 5)"
+        default=config.get("height", 5),
+        help=f"Height of the progress bar in pixels (default: {config.get('height', 5)})"
     )
     
     parser.add_argument(
         "--bg-color",
         type=str,
-        default="808080",
-        help="Background color in hex format (default: 808080)"
+        default=config.get("bg_color", "808080"),
+        help=f"Background color in hex format (default: {config.get('bg_color', '808080')})"
     )
     
     parser.add_argument(
         "--fg-color",
         type=str,
-        default="FF0000",
-        help="Foreground color in hex format (default: FF0000)"
+        default=config.get("fg_color", "FF0000"),
+        help=f"Foreground color in hex format (default: {config.get('fg_color', 'FF0000')})"
+    )
+    
+    parser.add_argument(
+        "--segment-interval",
+        type=int,
+        default=config.get("segment_interval", 1),
+        help=f"Segment interval in seconds for drawing progress bar (default: {config.get('segment_interval', 1)})"
     )
     
     args = parser.parse_args()
@@ -326,6 +364,7 @@ Examples:
     print(f"Height: {args.height}")
     print(f"Background color: #{args.bg_color}")
     print(f"Foreground color: #{args.fg_color}")
+    print(f"Segment interval: {args.segment_interval}s")
     
     success = add_progress_bar(
         input_path=input_path,
@@ -333,7 +372,8 @@ Examples:
         position=args.position,
         height=args.height,
         bg_color=args.bg_color,
-        fg_color=args.fg_color
+        fg_color=args.fg_color,
+        segment_interval=args.segment_interval
     )
     
     if success:

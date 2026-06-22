@@ -1,0 +1,7 @@
+{
+  "position": "bottom",
+  "height": 50,
+  "bg_color": "808080",
+  "fg_color": "FF0000",
+  "segment_interval": 1
+}
