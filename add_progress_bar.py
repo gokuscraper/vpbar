@@ -103,7 +103,28 @@ def generate_ffmpeg_command(
     Returns:
         List of command arguments for subprocess
     """
-    pass
+    video_info = get_video_info(input_path)
+    duration = video_info['duration']
+    
+    if position == 'top':
+        y_pos = 0
+    else:
+        y_pos = f"ih-{height}"
+    
+    bg_filter = f"drawbox=y={y_pos}:color=0x{bg_color}:w=iw:h={height}:t=fill"
+    fg_filter = f"drawbox=y={y_pos}:color=0x{fg_color}:w='iw*t/{duration}':h={height}:t=fill"
+    filter_complex = f"{bg_filter},{fg_filter}"
+    
+    cmd = [
+        "ffmpeg",
+        "-i", input_path,
+        "-vf", filter_complex,
+        "-c:a", "copy",
+        "-y",
+        output_path
+    ]
+    
+    return cmd
 
 
 def add_progress_bar(
