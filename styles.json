@@ -1,0 +1,43 @@
+{
+  "_说明": "进度条样式配置文件",
+  
+  "styles": {
+    "_说明_styles": "预定义样式列表，可通过 --style 参数选择",
+    
+    "A": {
+      "_说明": "半透明底层 + 浅黑色前景",
+      "bg_color": "808080",
+      "bg_alpha": 0.4,
+      "fg_color": "333333",
+      "fg_alpha": 0.7,
+      "height": 50,
+      "position": "bottom"
+    },
+    
+    "RED": {
+      "_说明": "灰色底层 + 红色前景（默认样式）",
+      "bg_color": "808080",
+      "bg_alpha": 1.0,
+      "fg_color": "FF0000",
+      "fg_alpha": 1.0,
+      "height": 50,
+      "position": "bottom"
+    },
+    
+    "DY": {
+      "_说明": "白色底层 + 红色前景",
+      "bg_color": "FFFFFF",
+      "bg_alpha": 0.3,
+      "fg_color": "FF0000",
+      "fg_alpha": 1.0,
+      "height": 50,
+      "position": "bottom"
+    }
+  },
+  
+  "_说明_default_style": "默认使用的样式名称",
+  "default_style": "A",
+  
+  "_说明_segment_interval": "分段间隔（秒），影响进度条平滑度和性能",
+  "segment_interval": 1
+}

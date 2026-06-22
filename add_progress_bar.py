@@ -33,6 +33,38 @@ def load_config() -> dict:
     }
 
 
+def load_styles() -> dict:
+    """Load styles from styles.json file.
+    
+    Returns:
+        Dictionary containing styles configuration
+    """
+    styles_path = Path(__file__).parent / "styles.json"
+    
+    if styles_path.exists():
+        try:
+            with open(styles_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Warning: Failed to load styles file: {e}", file=sys.stderr)
+    
+    # Default styles
+    return {
+        "styles": {
+            "默认": {
+                "bg_color": "808080",
+                "bg_alpha": 1.0,
+                "fg_color": "FF0000",
+                "fg_alpha": 1.0,
+                "height": 5,
+                "position": "bottom"
+            }
+        },
+        "default_style": "默认",
+        "segment_interval": 1
+    }
+
+
 def get_video_info(input_path: str) -> dict:
     """Get video metadata using ffprobe.
     
@@ -114,6 +146,8 @@ def generate_ffmpeg_command(
     height: int,
     bg_color: str,
     fg_color: str,
+    bg_alpha: float = 1.0,
+    fg_alpha: float = 1.0,
     segment_interval: int = 1
 ) -> list:
     """Generate FFmpeg command for adding progress bar.
@@ -178,10 +212,10 @@ def generate_ffmpeg_command(
     num_segments = int(duration / segment_interval) + 1
     drawbox_filters = []
     
-    # 底层静态条
-    drawbox_filters.append(f"drawbox=y={y_pos}:color=0x{bg_color}:w=iw:h={height}:t=fill")
+    # 底层静态条（带透明度）
+    drawbox_filters.append(f"drawbox=y={y_pos}:color=0x{bg_color}@{bg_alpha}:w=iw:h={height}:t=fill")
     
-    # 上层动态条：分段绘制，每段宽度递增
+    # 上层动态条：分段绘制，每段宽度递增（带透明度）
     for i in range(num_segments):
         start_time = i * segment_interval
         end_time = min((i + 1) * segment_interval, duration)
@@ -189,7 +223,7 @@ def generate_ffmpeg_command(
         bar_width = int(width * (start_time / duration))
         if bar_width > 0:
             drawbox_filters.append(
-                f"drawbox=y={y_pos}:color=0x{fg_color}:w={bar_width}:h={height}:t=fill:enable='between(t,{start_time},{end_time})'"
+                f"drawbox=y={y_pos}:color=0x{fg_color}@{fg_alpha}:w={bar_width}:h={height}:t=fill:enable='between(t,{start_time},{end_time})'"
             )
     
     filter_complex = ",".join(drawbox_filters)
@@ -213,6 +247,8 @@ def add_progress_bar(
     height: int,
     bg_color: str,
     fg_color: str,
+    bg_alpha: float = 1.0,
+    fg_alpha: float = 1.0,
     segment_interval: int = 1
 ) -> bool:
     """Add progress bar to video using FFmpeg.
@@ -224,6 +260,8 @@ def add_progress_bar(
         height: Height of the progress bar in pixels
         bg_color: Background color in hex (e.g., '808080')
         fg_color: Foreground color in hex (e.g., 'FF0000')
+        bg_alpha: Background transparency (0.0-1.0, default: 1.0)
+        fg_alpha: Foreground transparency (0.0-1.0, default: 1.0)
         segment_interval: Interval in seconds for drawing segments (default: 1)
         
     Returns:
@@ -256,6 +294,8 @@ def add_progress_bar(
             height=height,
             bg_color=bg_color,
             fg_color=fg_color,
+            bg_alpha=bg_alpha,
+            fg_alpha=fg_alpha,
             segment_interval=segment_interval
         )
         
@@ -286,8 +326,10 @@ def add_progress_bar(
 
 def main():
     """Main entry point for the CLI tool."""
-    # Load configuration
-    config = load_config()
+    # Load styles configuration
+    styles_config = load_styles()
+    styles = styles_config.get("styles", {})
+    default_style = styles_config.get("default_style", "默认")
     
     parser = argparse.ArgumentParser(
         description="Add a dual-layer progress bar to videos using FFmpeg.",
@@ -296,6 +338,7 @@ def main():
 Examples:
   %(prog)s input.mp4
   %(prog)s input.mp4 -o output.mp4
+  %(prog)s input.mp4 --style 小A
   %(prog)s input.mp4 -p top --height 10
   %(prog)s input.mp4 --bg-color 000000 --fg-color 00FF00
         """
@@ -315,42 +358,75 @@ Examples:
     )
     
     parser.add_argument(
+        "--style",
+        type=str,
+        choices=list(styles.keys()),
+        default=default_style,
+        help=f"Progress bar style (default: {default_style}). Available: {', '.join(styles.keys())}"
+    )
+    
+    parser.add_argument(
         "-p", "--position",
         type=str,
         choices=["top", "middle", "bottom"],
-        default=config.get("position", "bottom"),
-        help=f"Position of the progress bar (default: {config.get('position', 'bottom')})"
+        default=None,
+        help="Position of the progress bar (overrides style)"
     )
     
     parser.add_argument(
         "--height",
         type=int,
-        default=config.get("height", 5),
-        help=f"Height of the progress bar in pixels (default: {config.get('height', 5)})"
+        default=None,
+        help="Height of the progress bar in pixels (overrides style)"
     )
     
     parser.add_argument(
         "--bg-color",
         type=str,
-        default=config.get("bg_color", "808080"),
-        help=f"Background color in hex format (default: {config.get('bg_color', '808080')})"
+        default=None,
+        help="Background color in hex format (overrides style)"
     )
     
     parser.add_argument(
         "--fg-color",
         type=str,
-        default=config.get("fg_color", "FF0000"),
-        help=f"Foreground color in hex format (default: {config.get('fg_color', 'FF0000')})"
+        default=None,
+        help="Foreground color in hex format (overrides style)"
+    )
+    
+    parser.add_argument(
+        "--bg-alpha",
+        type=float,
+        default=None,
+        help="Background transparency 0.0-1.0 (overrides style)"
+    )
+    
+    parser.add_argument(
+        "--fg-alpha",
+        type=float,
+        default=None,
+        help="Foreground transparency 0.0-1.0 (overrides style)"
     )
     
     parser.add_argument(
         "--segment-interval",
         type=int,
-        default=config.get("segment_interval", 1),
-        help=f"Segment interval in seconds for drawing progress bar (default: {config.get('segment_interval', 1)})"
+        default=styles_config.get("segment_interval", 1),
+        help=f"Segment interval in seconds (default: {styles_config.get('segment_interval', 1)})"
     )
     
     args = parser.parse_args()
+    
+    # Get style configuration
+    style_config = styles.get(args.style, {})
+    
+    # Merge style config with command line arguments (CLI overrides style)
+    position = args.position if args.position else style_config.get("position", "bottom")
+    height = args.height if args.height else style_config.get("height", 5)
+    bg_color = args.bg_color if args.bg_color else style_config.get("bg_color", "808080")
+    fg_color = args.fg_color if args.fg_color else style_config.get("fg_color", "FF0000")
+    bg_alpha = args.bg_alpha if args.bg_alpha is not None else style_config.get("bg_alpha", 1.0)
+    fg_alpha = args.fg_alpha if args.fg_alpha is not None else style_config.get("fg_alpha", 1.0)
     
     input_path = args.input
     output_path = args.output
@@ -360,19 +436,22 @@ Examples:
     
     print(f"Input: {input_path}")
     print(f"Output: {output_path}")
-    print(f"Position: {args.position}")
-    print(f"Height: {args.height}")
-    print(f"Background color: #{args.bg_color}")
-    print(f"Foreground color: #{args.fg_color}")
+    print(f"Style: {args.style}")
+    print(f"Position: {position}")
+    print(f"Height: {height}")
+    print(f"Background: #{bg_color} @ {bg_alpha}")
+    print(f"Foreground: #{fg_color} @ {fg_alpha}")
     print(f"Segment interval: {args.segment_interval}s")
     
     success = add_progress_bar(
         input_path=input_path,
         output_path=output_path,
-        position=args.position,
-        height=args.height,
-        bg_color=args.bg_color,
-        fg_color=args.fg_color,
+        position=position,
+        height=height,
+        bg_color=bg_color,
+        fg_color=fg_color,
+        bg_alpha=bg_alpha,
+        fg_alpha=fg_alpha,
         segment_interval=args.segment_interval
     )
     
