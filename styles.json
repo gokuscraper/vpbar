@@ -4,40 +4,77 @@
   "styles": {
     "_说明_styles": "预定义样式列表，可通过 --style 参数选择",
     
-    "A": {
+    "小A": {
       "_说明": "半透明底层 + 浅黑色前景",
       "bg_color": "808080",
       "bg_alpha": 0.4,
       "fg_color": "333333",
       "fg_alpha": 0.7,
       "height": 50,
-      "position": "bottom"
+      "position": "bottom",
+      "corner_radius": 15
     },
     
-    "RED": {
+    "经典红": {
       "_说明": "灰色底层 + 红色前景（默认样式）",
       "bg_color": "808080",
       "bg_alpha": 1.0,
       "fg_color": "FF0000",
       "fg_alpha": 1.0,
-      "height": 50,
-      "position": "bottom"
+      "height": 5,
+      "position": "bottom",
+      "corner_radius": 0
     },
     
-    "DY": {
+    "抖音风": {
       "_说明": "白色底层 + 红色前景",
       "bg_color": "FFFFFF",
       "bg_alpha": 0.3,
       "fg_color": "FF0000",
       "fg_alpha": 1.0,
-      "height": 50,
-      "position": "bottom"
+      "height": 3,
+      "position": "bottom",
+      "corner_radius": 0
+    },
+    
+    "圆角小A": {
+      "_说明": "小A的圆角版本",
+      "bg_color": "808080",
+      "bg_alpha": 0.4,
+      "fg_color": "333333",
+      "fg_alpha": 0.7,
+      "height": 8,
+      "position": "bottom",
+      "corner_radius": 4
     }
   },
   
   "_说明_default_style": "默认使用的样式名称",
-  "default_style": "A",
+  "default_style": "小A",
   
   "_说明_segment_interval": "分段间隔（秒），影响进度条平滑度和性能",
-  "segment_interval": 1
+  "segment_interval": 1,
+  
+  "_设计规范参考": "====================",
+  
+  "_corner_radius说明": "圆角半径（像素），范围：0 到 height/2",
+  
+  "_设计风格参考": {
+    "方角": "corner_radius = 0",
+    "微圆角": "corner_radius = height/8 (如height=8时为1px)",
+    "Material Design": "corner_radius = height/4 (如height=8时为2px)",
+    "小米/现代UI": "corner_radius = height/3 (如height=8时为3px)",
+    "iOS风格": "corner_radius = height/2.5 (如height=8时为3-4px)",
+    "完全圆角": "corner_radius = height/2 (如height=8时为4px，两端变成半圆)"
+  },
+  
+  "_高度与圆角搭配建议": {
+    "height=3px": "corner_radius: 1-2px (抖音风格)",
+    "height=5px": "corner_radius: 2-3px (经典风格)",
+    "height=8px": "corner_radius: 3-4px (小A风格)",
+    "height=10px": "corner_radius: 4-5px (粗进度条)",
+    "height=15px": "corner_radius: 5-8px (很粗进度条)"
+  },
+  
+  "_小米图标风格": "圆角通常为高度的 1/4 到 1/3，如 height=8px 时用 2-3px"
 }

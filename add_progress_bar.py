@@ -5,7 +5,15 @@ import argparse
 import json
 import subprocess
 import sys
+import tempfile
+import os
 from pathlib import Path
+
+try:
+    from PIL import Image, ImageDraw
+    PIL_AVAILABLE = True
+except ImportError:
+    PIL_AVAILABLE = False
 
 
 def load_config() -> dict:
@@ -63,6 +71,40 @@ def load_styles() -> dict:
         "default_style": "默认",
         "segment_interval": 1
     }
+
+
+def create_rounded_rect(width: int, height: int, color: str, alpha: float, radius: int, output_path: str):
+    """Create a rounded rectangle image with transparency.
+    
+    Args:
+        width: Rectangle width
+        height: Rectangle height
+        color: Hex color (e.g., 'FF0000')
+        alpha: Transparency 0.0-1.0
+        radius: Corner radius in pixels
+        output_path: Output image path
+    """
+    if not PIL_AVAILABLE:
+        raise ImportError("PIL/Pillow is required for rounded corners. Install with: pip install Pillow")
+    
+    # Parse hex color
+    r = int(color[0:2], 16)
+    g = int(color[2:4], 16)
+    b = int(color[4:6], 16)
+    a = int(alpha * 255)
+    
+    # Create image with transparency
+    img = Image.new('RGBA', (width, height), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    
+    # Draw rounded rectangle
+    draw.rounded_rectangle(
+        [0, 0, width - 1, height - 1],
+        radius=radius,
+        fill=(r, g, b, a)
+    )
+    
+    img.save(output_path, 'PNG')
 
 
 def get_video_info(input_path: str) -> dict:
@@ -148,7 +190,8 @@ def generate_ffmpeg_command(
     fg_color: str,
     bg_alpha: float = 1.0,
     fg_alpha: float = 1.0,
-    segment_interval: int = 1
+    segment_interval: int = 1,
+    corner_radius: int = 0
 ) -> list:
     """Generate FFmpeg command for adding progress bar.
     
@@ -179,63 +222,99 @@ def generate_ffmpeg_command(
     width = video_info['width']
     fps = video_info.get('fps', 30)  # 默认 30fps
     
-    # filter_complex 方案：
-    # 1. 底层静态灰色条
-    # 2. 创建红色条视频
-    # 3. 用 timeline 方式动态控制宽度
-    # 4. 叠加到原视频
+    # 判断是否使用圆角模式
+    use_rounded = corner_radius > 0 and PIL_AVAILABLE
     
-    # 更简单可靠的方法：用 drawbox + enable 分段绘制
-    # 或者用 geq 滤镜
-    
-    # 最可靠的方法：用 overlay 配合动态生成的进度条
-    # 使用 colorkey 滤镜来实现动态裁剪效果
-    
-    filter_complex = (
-        # 底层灰色静态条
-        f"[0:v]drawbox=y={y_pos}:color=0x{bg_color}:w=iw:h={height}:t=fill[bg];"
-        # 创建红色进度条视频，时长与原视频相同
-        f"color=c=0x{fg_color}:s={width}x{height}:r={fps}:d={duration}[redbar];"
-        # 用 trim 滤镜动态裁剪：每秒显示更多内容
-        # 这里用循环方式：在每个时间点，只显示对应比例的宽度
-        # 实际上用 crop 的 width 表达式
-        f"[redbar]crop=w='min({width},{width}*on/(on+off))':h={height}:x=0:y=0,"
-        # 这里 on/off 不对，需要用 t 变量
-        f"setsar=1[bar];"
-        # 叠加到视频上
-        f"[bg][bar]overlay=y={y_pos}:x=0"
-    )
-    
-    # 使用 drawbox 的 enable 参数，在不同时间绘制不同宽度的条
-    # 使用配置的 segment_interval 参数
-    
-    num_segments = int(duration / segment_interval) + 1
-    drawbox_filters = []
-    
-    # 底层静态条（带透明度）
-    drawbox_filters.append(f"drawbox=y={y_pos}:color=0x{bg_color}@{bg_alpha}:w=iw:h={height}:t=fill")
-    
-    # 上层动态条：分段绘制，每段宽度递增（带透明度）
-    for i in range(num_segments):
-        start_time = i * segment_interval
-        end_time = min((i + 1) * segment_interval, duration)
-        # 使用开始时间计算宽度，确保进度条与视频同步
-        bar_width = int(width * (start_time / duration))
-        if bar_width > 0:
-            drawbox_filters.append(
-                f"drawbox=y={y_pos}:color=0x{fg_color}@{fg_alpha}:w={bar_width}:h={height}:t=fill:enable='between(t,{start_time},{end_time})'"
+    if use_rounded:
+        # 圆角模式：使用预生成的圆角矩形图片
+        # 使用英文临时目录，避免中文路径问题
+        temp_base = 'C:\\Users\\27598\\AppData\\Local\\Temp\\deveco'
+        os.makedirs(temp_base, exist_ok=True)
+        temp_dir = os.path.join(temp_base, 'progress_bar_temp')
+        os.makedirs(temp_dir, exist_ok=True)
+        
+        # 生成底层圆角矩形（全宽）
+        bg_img_path = os.path.join(temp_dir, 'bg.png')
+        create_rounded_rect(width, height, bg_color, bg_alpha, corner_radius, bg_img_path)
+        
+        # 生成不同宽度的进度条圆角矩形
+        num_segments = int(duration / segment_interval) + 1
+        
+        # 构建输入参数和滤镜链
+        input_args = ["-i", input_path]
+        
+        # 底层静态条：将背景图片作为输入
+        input_args.extend(["-i", bg_img_path])
+        
+        # 上层动态条：生成所有进度条图片
+        bar_data = []
+        for i in range(num_segments):
+            start_time = i * segment_interval
+            end_time = min((i + 1) * segment_interval, duration)
+            bar_width = int(width * (start_time / duration))
+            
+            if bar_width > 0:
+                bar_img_path = os.path.join(temp_dir, f'bar_{i}.png')
+                create_rounded_rect(bar_width, height, fg_color, fg_alpha, corner_radius, bar_img_path)
+                input_args.extend(["-i", bar_img_path])
+                bar_data.append((start_time, end_time))
+        
+        # 构建 filter_complex
+        # 计算y坐标（overlay中使用H表示输出高度）
+        y_expr = f"H-{height}"
+        
+        # 先叠加底层 [0:v]视频 [1:v]背景图
+        overlay_parts = [f"[0:v][1:v]overlay=y={y_expr}:x=0[v0]"]
+        prev_output = "v0"
+        
+        # 再叠加动态条 [2:v], [3:v], ...
+        for idx, (start_time, end_time) in enumerate(bar_data):
+            input_idx = idx + 2  # 从2开始（0是视频，1是背景）
+            overlay_parts.append(
+                f"[{prev_output}][{input_idx}:v]overlay=y={y_expr}:x=0:enable='between(t,{start_time},{end_time})'[v{idx+1}]"
             )
-    
-    filter_complex = ",".join(drawbox_filters)
-    
-    cmd = [
-        "ffmpeg",
-        "-i", input_path,
-        "-vf", filter_complex,
-        "-c:a", "copy",
-        "-y",
-        output_path
-    ]
+            prev_output = f"v{idx+1}"
+        
+        filter_complex = ";".join(overlay_parts)
+        
+        cmd = [
+            "ffmpeg",
+        ] + input_args + [
+            "-filter_complex", filter_complex,
+            "-map", f"[{prev_output}]",
+            "-c:a", "copy",
+            "-y",
+            output_path
+        ]
+    else:
+        # 方角模式：使用 drawbox
+        num_segments = int(duration / segment_interval) + 1
+        drawbox_filters = []
+        
+        # 底层静态条（带透明度）
+        drawbox_filters.append(f"drawbox=y={y_pos}:color=0x{bg_color}@{bg_alpha}:w=iw:h={height}:t=fill")
+        
+        # 上层动态条：分段绘制，每段宽度递增（带透明度）
+        for i in range(num_segments):
+            start_time = i * segment_interval
+            end_time = min((i + 1) * segment_interval, duration)
+            # 使用开始时间计算宽度，确保进度条与视频同步
+            bar_width = int(width * (start_time / duration))
+            if bar_width > 0:
+                drawbox_filters.append(
+                    f"drawbox=y={y_pos}:color=0x{fg_color}@{fg_alpha}:w={bar_width}:h={height}:t=fill:enable='between(t,{start_time},{end_time})'"
+                )
+        
+        filter_complex = ",".join(drawbox_filters)
+        
+        cmd = [
+            "ffmpeg",
+            "-i", input_path,
+            "-vf", filter_complex,
+            "-c:a", "copy",
+            "-y",
+            output_path
+        ]
     
     return cmd
 
@@ -249,7 +328,8 @@ def add_progress_bar(
     fg_color: str,
     bg_alpha: float = 1.0,
     fg_alpha: float = 1.0,
-    segment_interval: int = 1
+    segment_interval: int = 1,
+    corner_radius: int = 0
 ) -> bool:
     """Add progress bar to video using FFmpeg.
     
@@ -263,6 +343,7 @@ def add_progress_bar(
         bg_alpha: Background transparency (0.0-1.0, default: 1.0)
         fg_alpha: Foreground transparency (0.0-1.0, default: 1.0)
         segment_interval: Interval in seconds for drawing segments (default: 1)
+        corner_radius: Corner radius in pixels, 0 for square corners (default: 0)
         
     Returns:
         True if successful, False otherwise
@@ -296,7 +377,8 @@ def add_progress_bar(
             fg_color=fg_color,
             bg_alpha=bg_alpha,
             fg_alpha=fg_alpha,
-            segment_interval=segment_interval
+            segment_interval=segment_interval,
+            corner_radius=corner_radius
         )
         
         print("Processing video with FFmpeg...")
@@ -415,6 +497,13 @@ Examples:
         help=f"Segment interval in seconds (default: {styles_config.get('segment_interval', 1)})"
     )
     
+    parser.add_argument(
+        "--corner-radius",
+        type=int,
+        default=None,
+        help="Corner radius in pixels, 0 for square corners (overrides style). Requires Pillow for rounded corners."
+    )
+    
     args = parser.parse_args()
     
     # Get style configuration
@@ -427,6 +516,7 @@ Examples:
     fg_color = args.fg_color if args.fg_color else style_config.get("fg_color", "FF0000")
     bg_alpha = args.bg_alpha if args.bg_alpha is not None else style_config.get("bg_alpha", 1.0)
     fg_alpha = args.fg_alpha if args.fg_alpha is not None else style_config.get("fg_alpha", 1.0)
+    corner_radius = args.corner_radius if args.corner_radius is not None else style_config.get("corner_radius", 0)
     
     input_path = args.input
     output_path = args.output
@@ -441,6 +531,7 @@ Examples:
     print(f"Height: {height}")
     print(f"Background: #{bg_color} @ {bg_alpha}")
     print(f"Foreground: #{fg_color} @ {fg_alpha}")
+    print(f"Corner radius: {corner_radius}px")
     print(f"Segment interval: {args.segment_interval}s")
     
     success = add_progress_bar(
@@ -452,7 +543,8 @@ Examples:
         fg_color=fg_color,
         bg_alpha=bg_alpha,
         fg_alpha=fg_alpha,
-        segment_interval=args.segment_interval
+        segment_interval=args.segment_interval,
+        corner_radius=corner_radius
     )
     
     if success:
