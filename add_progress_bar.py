@@ -108,12 +108,66 @@ def generate_ffmpeg_command(
     
     if position == 'top':
         y_pos = 0
-    else:
+    elif position == 'middle':
+        y_pos = f"(ih-{height})/2"
+    else:  # bottom
         y_pos = f"ih-{height}"
     
-    bg_filter = f"drawbox=y={y_pos}:color=0x{bg_color}:w=iw:h={height}:t=fill"
-    fg_filter = f"drawbox=y={y_pos}:color=0x{fg_color}:w='iw*t/{duration}':h={height}:t=fill"
-    filter_complex = f"{bg_filter},{fg_filter}"
+    # 使用 filter_complex 实现真正的动态进度条
+    # 方法：创建进度条视频，用 trim 动态裁剪，叠加到视频上
+    
+    width = video_info['width']
+    fps = video_info.get('fps', 30)  # 默认 30fps
+    
+    # filter_complex 方案：
+    # 1. 底层静态灰色条
+    # 2. 创建红色条视频
+    # 3. 用 timeline 方式动态控制宽度
+    # 4. 叠加到原视频
+    
+    # 更简单可靠的方法：用 drawbox + enable 分段绘制
+    # 或者用 geq 滤镜
+    
+    # 最可靠的方法：用 overlay 配合动态生成的进度条
+    # 使用 colorkey 滤镜来实现动态裁剪效果
+    
+    filter_complex = (
+        # 底层灰色静态条
+        f"[0:v]drawbox=y={y_pos}:color=0x{bg_color}:w=iw:h={height}:t=fill[bg];"
+        # 创建红色进度条视频，时长与原视频相同
+        f"color=c=0x{fg_color}:s={width}x{height}:r={fps}:d={duration}[redbar];"
+        # 用 trim 滤镜动态裁剪：每秒显示更多内容
+        # 这里用循环方式：在每个时间点，只显示对应比例的宽度
+        # 实际上用 crop 的 width 表达式
+        f"[redbar]crop=w='min({width},{width}*on/(on+off))':h={height}:x=0:y=0,"
+        # 这里 on/off 不对，需要用 t 变量
+        f"setsar=1[bar];"
+        # 叠加到视频上
+        f"[bg][bar]overlay=y={y_pos}:x=0"
+    )
+    
+    # 上面的方法还是不对，让我用最简单可靠的方法
+    # 使用 drawbox 的 enable 参数，在不同时间绘制不同宽度的条
+    
+    # 计算需要多少个分段（每秒一段）
+    num_segments = int(duration) + 1
+    drawbox_filters = []
+    
+    # 底层静态条
+    drawbox_filters.append(f"drawbox=y={y_pos}:color=0x{bg_color}:w=iw:h={height}:t=fill")
+    
+    # 上层动态条：分段绘制，每段宽度递增
+    for i in range(num_segments):
+        start_time = i
+        end_time = i + 1
+        # 计算这个时间段的进度条宽度
+        bar_width = int(width * (end_time / duration))
+        if bar_width > 0:
+            drawbox_filters.append(
+                f"drawbox=y={y_pos}:color=0x{fg_color}:w={bar_width}:h={height}:t=fill:enable='between(t,{start_time},{end_time})'"
+            )
+    
+    filter_complex = ",".join(drawbox_filters)
     
     cmd = [
         "ffmpeg",
@@ -232,7 +286,7 @@ Examples:
     parser.add_argument(
         "-p", "--position",
         type=str,
-        choices=["top", "bottom"],
+        choices=["top", "middle", "bottom"],
         default="bottom",
         help="Position of the progress bar (default: bottom)"
     )
