@@ -185,8 +185,8 @@ def generate_ffmpeg_command(
     for i in range(num_segments):
         start_time = i * segment_interval
         end_time = min((i + 1) * segment_interval, duration)
-        # 计算这个时间段的进度条宽度
-        bar_width = int(width * (end_time / duration))
+        # 使用开始时间计算宽度，确保进度条与视频同步
+        bar_width = int(width * (start_time / duration))
         if bar_width > 0:
             drawbox_filters.append(
                 f"drawbox=y={y_pos}:color=0x{fg_color}:w={bar_width}:h={height}:t=fill:enable='between(t,{start_time},{end_time})'"

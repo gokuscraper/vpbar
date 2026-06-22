@@ -1,7 +1,16 @@
 {
-  "position": "bottom",
+  "_说明_position": "进度条位置，可选值：top(顶部)、middle(中间)、bottom(底部)",
+  "position": "top",
+  
+  "_说明_height": "进度条高度（像素），建议范围：3-20",
   "height": 50,
+  
+  "_说明_bg_color": "底层颜色（十六进制），示例：808080(灰色)、000000(黑色)、FFFFFF(白色)",
   "bg_color": "808080",
+  
+  "_说明_fg_color": "前景颜色（十六进制），示例：FF0000(红色)、00FF00(绿色)、0000FF(蓝色)、FFFF00(黄色)",
   "fg_color": "FF0000",
+  
+  "_说明_segment_interval": "分段间隔（秒），影响进度条平滑度和性能：1=最平滑但最慢，5=较平滑且较快，10=粗糙但最快",
   "segment_interval": 1
 }
