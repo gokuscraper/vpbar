@@ -231,7 +231,9 @@ def generate_ffmpeg_command(
     fg_alpha: float = 1.0,
     segment_interval: int = 1,
     corner_radius: int = 0,
-    chapters: list = None
+    chapters: list = None,
+    divider_width: int = 3,
+    divider_height_ratio: float = 0.8
 ) -> list:
     """Generate FFmpeg command for adding progress bar.
     
@@ -247,6 +249,8 @@ def generate_ffmpeg_command(
         segment_interval: Interval in seconds for drawing segments (default: 1)
         corner_radius: Corner radius in pixels, 0 for square corners (default: 0)
         chapters: List of chapter definitions, each with 'start', 'end', 'label'
+        divider_width: Width of chapter divider lines in pixels (default: 3)
+        divider_height_ratio: Height ratio of divider (0.0-1.0, default: 0.8)
         
     Returns:
         List of command arguments for subprocess
@@ -356,13 +360,26 @@ def generate_ffmpeg_command(
             font_size = max(10, int(height * 0.5))
             
             # 绘制分隔线
+            # 分隔线高度 = 进度条高度 * 比例
+            divider_height = int(height * divider_height_ratio)
+            # 分隔线 y 偏移（居中）
+            divider_y_offset = (height - divider_height) // 2
+            
             for i, chapter in enumerate(chapters[:-1]):  # 最后一个章节不需要分隔线
                 # 分隔线位置：章节结束时间对应的x坐标
                 divider_x = int(width * (chapter['end'] / duration))
                 
-                # 绘制分隔线（黑色细线，宽度2px）
+                # 分隔线 y 坐标
+                if position == 'bottom':
+                    divider_y = f"ih-{height}+{divider_y_offset}"
+                elif position == 'top':
+                    divider_y = f"{divider_y_offset}"
+                else:  # middle
+                    divider_y = f"(ih-{height})/2+{divider_y_offset}"
+                
+                # 绘制分隔线（黑色，居中）
                 drawbox_filters.append(
-                    f"drawbox=x={divider_x-1}:y={y_pos}:color=black:w=2:h={height}:t=fill"
+                    f"drawbox=x={divider_x-divider_width//2}:y={divider_y}:color=black:w={divider_width}:h={divider_height}:t=fill"
                 )
             
             # 绘制文字标签
@@ -434,7 +451,9 @@ def add_progress_bar(
     fg_alpha: float = 1.0,
     segment_interval: int = 1,
     corner_radius: int = 0,
-    chapters: list = None
+    chapters: list = None,
+    divider_width: int = 3,
+    divider_height_ratio: float = 0.8
 ) -> bool:
     """Add progress bar to video using FFmpeg.
     
@@ -449,6 +468,9 @@ def add_progress_bar(
         fg_alpha: Foreground transparency (0.0-1.0, default: 1.0)
         segment_interval: Interval in seconds for drawing segments (default: 1)
         corner_radius: Corner radius in pixels, 0 for square corners (default: 0)
+        chapters: List of chapter definitions
+        divider_width: Width of chapter divider lines in pixels (default: 3)
+        divider_height_ratio: Height ratio of divider (0.0-1.0, default: 0.8)
         
     Returns:
         True if successful, False otherwise
@@ -484,7 +506,9 @@ def add_progress_bar(
             fg_alpha=fg_alpha,
             segment_interval=segment_interval,
             corner_radius=corner_radius,
-            chapters=chapters
+            chapters=chapters,
+            divider_width=divider_width,
+            divider_height_ratio=divider_height_ratio
         )
         
         print("Processing video with FFmpeg...")
@@ -641,6 +665,20 @@ Examples:
         help="Chapter definition in format: 'start1-end1:label1,start2-end2:label2,...' Example: '0-6:开头,6-11:结尾'"
     )
     
+    parser.add_argument(
+        "--divider-width",
+        type=int,
+        default=3,
+        help="Width of chapter divider lines in pixels (default: 3)"
+    )
+    
+    parser.add_argument(
+        "--divider-height-ratio",
+        type=float,
+        default=0.8,
+        help="Height ratio of divider relative to progress bar height, 0.0-1.0 (default: 0.8)"
+    )
+    
     args = parser.parse_args()
     
     # Parse chapters argument
@@ -701,7 +739,9 @@ Examples:
         fg_alpha=fg_alpha,
         segment_interval=args.segment_interval,
         corner_radius=corner_radius,
-        chapters=chapters
+        chapters=chapters,
+        divider_width=args.divider_width,
+        divider_height_ratio=args.divider_height_ratio
     )
     
     if success:
