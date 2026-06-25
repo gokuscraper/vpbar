@@ -520,8 +520,9 @@ def generate_ffmpeg_command(
             scrubber_y = f"H-{height}"
             
             # 使用 scale 滤镜缩放拖拽头，然后 overlay
+            # GIF 会自动循环播放
             overlay_parts.append(
-                f"[{scrubber_idx}:v]scale={scrubber_size}:{scrubber_size}[scrubber_scaled];[{prev_output}][scrubber_scaled]overlay=y={scrubber_y}:x='(W-w)*t/{duration}':enable='between(t,0,{duration})'[v_scrubber]"
+                f"[{scrubber_idx}:v]scale={scrubber_size}:{scrubber_size}[scrubber_scaled];[{prev_output}][scrubber_scaled]overlay=y={scrubber_y}:x='(W-w)*t/{duration}'[v_scrubber]"
             )
             prev_output = "v_scrubber"
         
