@@ -448,23 +448,15 @@ def generate_ffmpeg_command(
         os.makedirs(temp_dir, exist_ok=True)
         
         # 生成底层圆角矩形（全宽，带章节分隔线和文字）
+        # 背景条始终使用固定颜色，不使用渐变
         bg_img_path = os.path.join(temp_dir, 'bg.png')
-        
-        # 判断是否使用渐变
-        if gradient:
-            # 渐变模式
-            create_gradient_bar(
-                width, height, gradient, bg_alpha, corner_radius, bg_img_path
-            )
-        else:
-            # 纯色模式
-            create_rounded_bar_with_text(
-                width, height, bg_color, bg_alpha, corner_radius, bg_img_path,
-                chapters=chapters,
-                duration=duration,
-                divider_width=divider_width,
-                divider_height_ratio=divider_height_ratio
-            )
+        create_rounded_bar_with_text(
+            width, height, bg_color, bg_alpha, corner_radius, bg_img_path,
+            chapters=chapters,
+            duration=duration,
+            divider_width=divider_width,
+            divider_height_ratio=divider_height_ratio
+        )
         
         # 生成不同宽度的进度条圆角矩形
         num_segments = int(duration / segment_interval) + 1
