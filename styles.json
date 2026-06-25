@@ -21,7 +21,7 @@
       "bg_alpha": 1.0,
       "fg_color": "FF0000",
       "fg_alpha": 1.0,
-      "height": 5,
+      "height": 50,
       "position": "bottom",
       "corner_radius": 0
     },
@@ -32,7 +32,7 @@
       "bg_alpha": 0.3,
       "fg_color": "FF0000",
       "fg_alpha": 1.0,
-      "height": 3,
+      "height": 50,
       "position": "bottom",
       "corner_radius": 0
     },
@@ -43,9 +43,9 @@
       "bg_alpha": 0.4,
       "fg_color": "333333",
       "fg_alpha": 0.7,
-      "height": 8,
+      "height": 50,
       "position": "bottom",
-      "corner_radius": 4
+      "corner_radius": 15
     }
   },
   

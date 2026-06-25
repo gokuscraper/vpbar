@@ -16,6 +16,45 @@ except ImportError:
     PIL_AVAILABLE = False
 
 
+def prepare_fonts() -> dict:
+    """准备字体文件，复制到临时目录以避免路径中的中文字符问题。
+    
+    Returns:
+        字体名称到路径的映射字典
+    """
+    import shutil
+    
+    # 临时字体目录
+    temp_font_dir = Path(tempfile.gettempdir()) / "deveco" / "fonts"
+    temp_font_dir.mkdir(parents=True, exist_ok=True)
+    
+    # 项目字体目录
+    script_dir = Path(__file__).parent
+    project_font_dir = script_dir / "fonts"
+    
+    fonts = {
+        'chinese': 'SourceHanSansSC-Regular.otf',  # 思源黑体
+        'english': 'Roboto-Regular.ttf',  # Roboto
+    }
+    
+    font_paths = {}
+    
+    for name, font_file in fonts.items():
+        src_path = project_font_dir / font_file
+        dst_path = temp_font_dir / font_file
+        
+        # 如果源文件存在，复制到临时目录
+        if src_path.exists():
+            if not dst_path.exists() or src_path.stat().st_mtime > dst_path.stat().st_mtime:
+                shutil.copy2(src_path, dst_path)
+            font_paths[name] = dst_path
+        elif dst_path.exists():
+            # 源不存在但临时目录有，直接使用
+            font_paths[name] = dst_path
+    
+    return font_paths
+
+
 def load_config() -> dict:
     """Load configuration from config.json file.
     
@@ -191,7 +230,8 @@ def generate_ffmpeg_command(
     bg_alpha: float = 1.0,
     fg_alpha: float = 1.0,
     segment_interval: int = 1,
-    corner_radius: int = 0
+    corner_radius: int = 0,
+    chapters: list = None
 ) -> list:
     """Generate FFmpeg command for adding progress bar.
     
@@ -202,6 +242,11 @@ def generate_ffmpeg_command(
         height: Height of the progress bar in pixels
         bg_color: Background color in hex (e.g., '808080')
         fg_color: Foreground color in hex (e.g., 'FF0000')
+        bg_alpha: Background transparency (0.0-1.0, default: 1.0)
+        fg_alpha: Foreground transparency (0.0-1.0, default: 1.0)
+        segment_interval: Interval in seconds for drawing segments (default: 1)
+        corner_radius: Corner radius in pixels, 0 for square corners (default: 0)
+        chapters: List of chapter definitions, each with 'start', 'end', 'label'
         
     Returns:
         List of command arguments for subprocess
@@ -305,6 +350,65 @@ def generate_ffmpeg_command(
                     f"drawbox=y={y_pos}:color=0x{fg_color}@{fg_alpha}:w={bar_width}:h={height}:t=fill:enable='between(t,{start_time},{end_time})'"
                 )
         
+        # 添加章节分隔线和文字标签
+        if chapters:
+            # 计算字体大小（根据进度条高度）
+            font_size = max(10, int(height * 0.5))
+            
+            # 绘制分隔线
+            for i, chapter in enumerate(chapters[:-1]):  # 最后一个章节不需要分隔线
+                # 分隔线位置：章节结束时间对应的x坐标
+                divider_x = int(width * (chapter['end'] / duration))
+                
+                # 绘制分隔线（黑色细线，宽度2px）
+                drawbox_filters.append(
+                    f"drawbox=x={divider_x-1}:y={y_pos}:color=black:w=2:h={height}:t=fill"
+                )
+            
+            # 绘制文字标签
+            # 准备字体文件
+            font_paths = prepare_fonts()
+            
+            # 选择字体：中文使用思源黑体，英文使用 Roboto
+            # 检查标签是否包含中文
+            has_chinese = any('\u4e00' <= char <= '\u9fff' for chapter in chapters if chapter.get('label') for char in chapter['label'])
+            
+            if has_chinese and 'chinese' in font_paths:
+                font_path = font_paths['chinese']
+            elif 'english' in font_paths:
+                font_path = font_paths['english']
+            else:
+                # 回退到系统字体
+                font_path = Path("C:/Windows/Fonts/msyh.ttc")
+            
+            # 转换为 FFmpeg 可接受的路径格式
+            # Windows 路径需要转义冒号：C:/path -> C\\:/path
+            font_path_str = str(font_path).replace('\\', '/')
+            if len(font_path_str) > 1 and font_path_str[1] == ':':
+                font_path_str = font_path_str[0] + '\\\\:' + font_path_str[2:]
+            
+            for chapter in chapters:
+                if not chapter.get('label'):
+                    continue
+                    
+                # 计算文字位置（章节中间）
+                mid_time = (chapter['start'] + chapter['end']) / 2
+                text_x = int(width * (mid_time / duration))
+                
+                # 文字y坐标（进度条内部居中，使用固定数值）
+                text_y_offset = (height - font_size) // 2
+                if position == 'bottom':
+                    text_y = f"h-{height}+{text_y_offset}"
+                elif position == 'top':
+                    text_y = f"{text_y_offset}"
+                else:  # middle
+                    text_y = f"(h-{height})/2+{text_y_offset}"
+                
+                # 使用 drawtext 滤镜绘制文字
+                drawbox_filters.append(
+                    f"drawtext=text='{chapter['label']}':fontcolor=black:fontsize={font_size}:x={text_x}:y={text_y}:fontfile={font_path_str}"
+                )
+        
         filter_complex = ",".join(drawbox_filters)
         
         cmd = [
@@ -316,7 +420,7 @@ def generate_ffmpeg_command(
             output_path
         ]
     
-    return cmd
+    return cmd, filter_complex
 
 
 def add_progress_bar(
@@ -329,7 +433,8 @@ def add_progress_bar(
     bg_alpha: float = 1.0,
     fg_alpha: float = 1.0,
     segment_interval: int = 1,
-    corner_radius: int = 0
+    corner_radius: int = 0,
+    chapters: list = None
 ) -> bool:
     """Add progress bar to video using FFmpeg.
     
@@ -368,7 +473,7 @@ def add_progress_bar(
         print(f"Video resolution: {width}x{height_res}")
         
         print("Generating FFmpeg command...")
-        cmd = generate_ffmpeg_command(
+        cmd, filter_complex = generate_ffmpeg_command(
             input_path=input_path,
             output_path=output_path,
             position=position,
@@ -378,16 +483,41 @@ def add_progress_bar(
             bg_alpha=bg_alpha,
             fg_alpha=fg_alpha,
             segment_interval=segment_interval,
-            corner_radius=corner_radius
+            corner_radius=corner_radius,
+            chapters=chapters
         )
         
         print("Processing video with FFmpeg...")
-        print(f"Command: {' '.join(cmd)}")
         
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        # 将滤镜参数写入临时文件（解决中文编码问题）
+        filter_file = Path(tempfile.gettempdir()) / "deveco" / "ffmpeg_filter.txt"
+        filter_file.parent.mkdir(parents=True, exist_ok=True)
+        filter_file.write_text(filter_complex, encoding='utf-8')
+        
+        # 使用 -filter_complex_script 从文件读取滤镜
+        cmd_with_script = [
+            "ffmpeg",
+            "-i", input_path,
+            "-filter_complex_script", str(filter_file),
+            "-c:a", "copy",
+            "-y",
+            output_path
+        ]
+        
+        print(f"Command: ffmpeg -i {input_path} -filter_complex_script {filter_file} ...")
+        
+        # 使用 UTF-8 编码运行 FFmpeg
+        result = subprocess.run(cmd_with_script, capture_output=True, encoding='utf-8', errors='replace')
+        
+        # 保留临时文件用于调试（如果失败）
+        if result.returncode == 0 and filter_file.exists():
+            filter_file.unlink()
         
         if result.returncode != 0:
             print(f"Error: FFmpeg failed with return code {result.returncode}", file=sys.stderr)
+            print(f"Filter file: {filter_file}", file=sys.stderr)
+            if filter_file.exists():
+                print(f"Filter content:\n{filter_file.read_text(encoding='utf-8')}", file=sys.stderr)
             if result.stderr:
                 print(f"FFmpeg error: {result.stderr}", file=sys.stderr)
             return False
@@ -504,7 +634,29 @@ Examples:
         help="Corner radius in pixels, 0 for square corners (overrides style). Requires Pillow for rounded corners."
     )
     
+    parser.add_argument(
+        "--chapters",
+        type=str,
+        default=None,
+        help="Chapter definition in format: 'start1-end1:label1,start2-end2:label2,...' Example: '0-6:开头,6-11:结尾'"
+    )
+    
     args = parser.parse_args()
+    
+    # Parse chapters argument
+    chapters = None
+    if args.chapters:
+        chapters = []
+        for chapter_str in args.chapters.split(','):
+            parts = chapter_str.strip().split(':')
+            if len(parts) == 2:
+                time_range, label = parts
+                start, end = time_range.split('-')
+                chapters.append({
+                    'start': float(start),
+                    'end': float(end),
+                    'label': label.strip()
+                })
     
     # Get style configuration
     style_config = styles.get(args.style, {})
@@ -533,6 +685,10 @@ Examples:
     print(f"Foreground: #{fg_color} @ {fg_alpha}")
     print(f"Corner radius: {corner_radius}px")
     print(f"Segment interval: {args.segment_interval}s")
+    if chapters:
+        print(f"Chapters: {len(chapters)}")
+        for ch in chapters:
+            print(f"  - {ch['start']}-{ch['end']}s: {ch['label']}")
     
     success = add_progress_bar(
         input_path=input_path,
@@ -544,7 +700,8 @@ Examples:
         bg_alpha=bg_alpha,
         fg_alpha=fg_alpha,
         segment_interval=args.segment_interval,
-        corner_radius=corner_radius
+        corner_radius=corner_radius,
+        chapters=chapters
     )
     
     if success:
