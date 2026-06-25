@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 
 try:
-    from PIL import Image, ImageDraw
+    from PIL import Image, ImageDraw, ImageFont
     PIL_AVAILABLE = True
 except ImportError:
     PIL_AVAILABLE = False
@@ -142,6 +142,108 @@ def create_rounded_rect(width: int, height: int, color: str, alpha: float, radiu
         radius=radius,
         fill=(r, g, b, a)
     )
+    
+    img.save(output_path, 'PNG')
+
+
+def create_rounded_bar_with_text(
+    width: int,
+    height: int,
+    color: str,
+    alpha: float,
+    radius: int,
+    output_path: str,
+    chapters: list = None,
+    duration: float = None,
+    divider_width: int = 3,
+    divider_height_ratio: float = 0.8
+):
+    """Create a rounded rectangle with chapter dividers and text labels.
+    
+    Args:
+        width: Rectangle width
+        height: Rectangle height
+        color: Hex color (e.g., 'FF0000')
+        alpha: Transparency 0.0-1.0
+        radius: Corner radius in pixels
+        output_path: Output image path
+        chapters: List of chapter definitions
+        duration: Video duration in seconds
+        divider_width: Width of divider lines
+        divider_height_ratio: Height ratio of dividers
+    """
+    if not PIL_AVAILABLE:
+        raise ImportError("PIL/Pillow is required for rounded corners")
+    
+    # Parse hex color
+    r = int(color[0:2], 16)
+    g = int(color[2:4], 16)
+    b = int(color[4:6], 16)
+    a = int(alpha * 255)
+    
+    # Create image with transparency
+    img = Image.new('RGBA', (width, height), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    
+    # Draw rounded rectangle
+    draw.rounded_rectangle(
+        [0, 0, width - 1, height - 1],
+        radius=radius,
+        fill=(r, g, b, a)
+    )
+    
+    # 绘制章节分隔线和文字
+    if chapters and duration:
+        # 分隔线高度
+        divider_height = int(height * divider_height_ratio)
+        divider_y_offset = (height - divider_height) // 2
+        
+        # 字体大小
+        font_size = max(10, int(height * 0.5))
+        
+        # 加载字体
+        font_paths = prepare_fonts()
+        has_chinese = any('\u4e00' <= char <= '\u9fff' for chapter in chapters if chapter.get('label') for char in chapter['label'])
+        
+        if has_chinese and 'chinese' in font_paths:
+            font_path = font_paths['chinese']
+        elif 'english' in font_paths:
+            font_path = font_paths['english']
+        else:
+            font_path = Path("C:/Windows/Fonts/msyh.ttc")
+        
+        try:
+            font = ImageFont.truetype(str(font_path), font_size)
+        except:
+            font = ImageFont.load_default()
+        
+        # 绘制分隔线
+        for i, chapter in enumerate(chapters[:-1]):
+            divider_x = int(width * (chapter['end'] / duration))
+            draw.rectangle(
+                [divider_x - divider_width // 2, divider_y_offset,
+                 divider_x + divider_width // 2, divider_y_offset + divider_height],
+                fill=(0, 0, 0, 255)  # 黑色
+            )
+        
+        # 绘制文字标签
+        for chapter in chapters:
+            if not chapter.get('label'):
+                continue
+            
+            mid_time = (chapter['start'] + chapter['end']) / 2
+            text_x = int(width * (mid_time / duration))
+            
+            # 获取文字大小
+            bbox = draw.textbbox((0, 0), chapter['label'], font=font)
+            text_width = bbox[2] - bbox[0]
+            text_height = bbox[3] - bbox[1]
+            
+            # 居中
+            x = text_x - text_width // 2
+            y = (height - text_height) // 2
+            
+            draw.text((x, y), chapter['label'], fill=(0, 0, 0, 255), font=font)
     
     img.save(output_path, 'PNG')
 
@@ -282,9 +384,15 @@ def generate_ffmpeg_command(
         temp_dir = os.path.join(temp_base, 'progress_bar_temp')
         os.makedirs(temp_dir, exist_ok=True)
         
-        # 生成底层圆角矩形（全宽）
+        # 生成底层圆角矩形（全宽，带章节分隔线和文字）
         bg_img_path = os.path.join(temp_dir, 'bg.png')
-        create_rounded_rect(width, height, bg_color, bg_alpha, corner_radius, bg_img_path)
+        create_rounded_bar_with_text(
+            width, height, bg_color, bg_alpha, corner_radius, bg_img_path,
+            chapters=chapters,
+            duration=duration,
+            divider_width=divider_width,
+            divider_height_ratio=divider_height_ratio
+        )
         
         # 生成不同宽度的进度条圆角矩形
         num_segments = int(duration / segment_interval) + 1
@@ -513,29 +621,34 @@ def add_progress_bar(
         
         print("Processing video with FFmpeg...")
         
-        # 将滤镜参数写入临时文件（解决中文编码问题）
-        filter_file = Path(tempfile.gettempdir()) / "deveco" / "ffmpeg_filter.txt"
-        filter_file.parent.mkdir(parents=True, exist_ok=True)
-        filter_file.write_text(filter_complex, encoding='utf-8')
+        # 判断是否使用圆角模式
+        use_rounded = corner_radius > 0 and PIL_AVAILABLE
         
-        # 使用 -filter_complex_script 从文件读取滤镜
-        cmd_with_script = [
-            "ffmpeg",
-            "-i", input_path,
-            "-filter_complex_script", str(filter_file),
-            "-c:a", "copy",
-            "-y",
-            output_path
-        ]
-        
-        print(f"Command: ffmpeg -i {input_path} -filter_complex_script {filter_file} ...")
-        
-        # 使用 UTF-8 编码运行 FFmpeg
-        result = subprocess.run(cmd_with_script, capture_output=True, encoding='utf-8', errors='replace')
-        
-        # 保留临时文件用于调试（如果失败）
-        if result.returncode == 0 and filter_file.exists():
-            filter_file.unlink()
+        if use_rounded:
+            # 圆角模式：直接使用生成的命令（包含多个输入文件）
+            print(f"Command: {' '.join(cmd[:10])} ...")
+            result = subprocess.run(cmd, capture_output=True, encoding='utf-8', errors='replace')
+        else:
+            # 方角模式：使用 -filter_complex_script 解决中文编码问题
+            filter_file = Path(tempfile.gettempdir()) / "deveco" / "ffmpeg_filter.txt"
+            filter_file.parent.mkdir(parents=True, exist_ok=True)
+            filter_file.write_text(filter_complex, encoding='utf-8')
+            
+            cmd_with_script = [
+                "ffmpeg",
+                "-i", input_path,
+                "-filter_complex_script", str(filter_file),
+                "-c:a", "copy",
+                "-y",
+                output_path
+            ]
+            
+            print(f"Command: ffmpeg -i {input_path} -filter_complex_script {filter_file} ...")
+            result = subprocess.run(cmd_with_script, capture_output=True, encoding='utf-8', errors='replace')
+            
+            # 清理临时文件
+            if result.returncode == 0 and filter_file.exists():
+                filter_file.unlink()
         
         if result.returncode != 0:
             print(f"Error: FFmpeg failed with return code {result.returncode}", file=sys.stderr)
