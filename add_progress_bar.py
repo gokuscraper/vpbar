@@ -511,13 +511,17 @@ def generate_ffmpeg_command(
             input_args.extend(["-i", scrubber_image])
             scrubber_idx = len(bar_data) + 2  # 拖拽头输入索引
             
+            # 先缩放拖拽头图片到合适大小（进度条高度的 1.5 倍）
+            scrubber_size = int(height * 1.5)
+            
             # 拖拽头跟随进度条移动
             # x: 从左到右移动，(W-w)*t/T，W是视频宽度，w是拖拽头宽度
             # y: 进度条中间，考虑拖拽头高度
             scrubber_y = f"H-{height}"
             
+            # 使用 scale 滤镜缩放拖拽头，然后 overlay
             overlay_parts.append(
-                f"[{prev_output}][{scrubber_idx}:v]overlay=y={scrubber_y}:x='(W-w)*t/{duration}':enable='between(t,0,{duration})'[v_scrubber]"
+                f"[{scrubber_idx}:v]scale={scrubber_size}:{scrubber_size}[scrubber_scaled];[{prev_output}][scrubber_scaled]overlay=y={scrubber_y}:x='(W-w)*t/{duration}':enable='between(t,0,{duration})'[v_scrubber]"
             )
             prev_output = "v_scrubber"
         
