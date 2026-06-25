@@ -507,8 +507,25 @@ def generate_ffmpeg_command(
         
         # 添加动态拖拽头（如果有）
         if scrubber_image:
-            # 添加拖拽头图片作为输入
-            input_args.extend(["-i", scrubber_image])
+            # 获取 GIF 信息，计算需要循环的次数
+            try:
+                from PIL import Image
+                gif_img = Image.open(scrubber_image)
+                gif_duration = 0
+                try:
+                    while True:
+                        gif_duration += gif_img.info.get('duration', 100)
+                        gif_img.seek(gif_img.tell() + 1)
+                except EOFError:
+                    pass
+                gif_duration = gif_duration / 1000  # 转換為秒
+                # 計算需要循環的次數（視頻時長 / GIF 時長 + 1）
+                loop_count = int(duration / gif_duration) + 2
+            except:
+                loop_count = 100  # 默認循環 100 次
+            
+            # 添加拖拽头图片作为输入，使用 -stream_loop 循环 GIF
+            input_args.extend(["-stream_loop", str(loop_count), "-i", scrubber_image])
             scrubber_idx = len(bar_data) + 2  # 拖拽头输入索引
             
             # 缩放拖拽头图片到进度条高度
@@ -520,7 +537,6 @@ def generate_ffmpeg_command(
             scrubber_y = f"H-{height}"
             
             # 使用 scale 滤镜缩放拖拽头，然后 overlay
-            # GIF 会自动循环播放
             overlay_parts.append(
                 f"[{scrubber_idx}:v]scale={scrubber_size}:{scrubber_size}[scrubber_scaled];[{prev_output}][scrubber_scaled]overlay=y={scrubber_y}:x='(W-w)*t/{duration}'[v_scrubber]"
             )
