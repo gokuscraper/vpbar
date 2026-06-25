@@ -146,6 +146,72 @@ def create_rounded_rect(width: int, height: int, color: str, alpha: float, radiu
     img.save(output_path, 'PNG')
 
 
+def create_gradient_bar(width: int, height: int, colors: list, alpha: float = 1.0, radius: int = 0, output_path: str = None):
+    """Create a gradient progress bar image.
+    
+    Args:
+        width: Bar width
+        height: Bar height
+        colors: List of hex colors (e.g., ['FF0000', '00FF00', '0000FF'])
+        alpha: Transparency 0.0-1.0
+        radius: Corner radius in pixels
+        output_path: Output image path
+    """
+    if not PIL_AVAILABLE:
+        raise ImportError("PIL/Pillow is required for gradient bars")
+    
+    # Create image with transparency
+    img = Image.new('RGBA', (width, height), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    
+    # Parse colors
+    rgb_colors = []
+    for color in colors:
+        r = int(color[0:2], 16)
+        g = int(color[2:4], 16)
+        b = int(color[4:6], 16)
+        rgb_colors.append((r, g, b, int(alpha * 255)))
+    
+    # Calculate segment width
+    num_segments = len(rgb_colors)
+    segment_width = width // num_segments
+    
+    # Draw gradient segments
+    for i, color in enumerate(rgb_colors):
+        x_start = i * segment_width
+        x_end = (i + 1) * segment_width if i < num_segments - 1 else width
+        
+        # Draw vertical gradient between colors
+        if i < num_segments - 1:
+            next_color = rgb_colors[i + 1]
+            for x in range(x_start, x_end):
+                # Interpolate between colors
+                ratio = (x - x_start) / (x_end - x_start)
+                r = int(color[0] + (next_color[0] - color[0]) * ratio)
+                g = int(color[1] + (next_color[1] - color[1]) * ratio)
+                b = int(color[2] + (next_color[2] - color[2]) * ratio)
+                a = int(color[3] + (next_color[3] - color[3]) * ratio)
+                draw.line([(x, 0), (x, height - 1)], fill=(r, g, b, a))
+        else:
+            # Last segment, fill with last color
+            draw.rectangle([x_start, 0, x_end, height - 1], fill=color)
+    
+    # Apply rounded corners if needed
+    if radius > 0:
+        # Create mask for rounded corners
+        mask = Image.new('L', (width, height), 0)
+        mask_draw = ImageDraw.Draw(mask)
+        mask_draw.rounded_rectangle([0, 0, width - 1, height - 1], radius=radius, fill=255)
+        
+        # Apply mask
+        img.putalpha(mask)
+    
+    if output_path:
+        img.save(output_path, 'PNG')
+    
+    return img
+
+
 def create_rounded_bar_with_text(
     width: int,
     height: int,
@@ -320,15 +386,17 @@ def generate_ffmpeg_command(
     output_path: str,
     position: str,
     height: int,
-    bg_color: str,
-    fg_color: str,
+    bg_color: str = None,
+    fg_color: str = None,
     bg_alpha: float = 1.0,
     fg_alpha: float = 1.0,
     segment_interval: int = 1,
     corner_radius: int = 0,
     chapters: list = None,
     divider_width: int = 3,
-    divider_height_ratio: float = 0.8
+    divider_height_ratio: float = 0.8,
+    gradient: list = None,
+    scrubber_image: str = None
 ) -> list:
     """Generate FFmpeg command for adding progress bar.
     
@@ -346,6 +414,8 @@ def generate_ffmpeg_command(
         chapters: List of chapter definitions, each with 'start', 'end', 'label'
         divider_width: Width of chapter divider lines in pixels (default: 3)
         divider_height_ratio: Height ratio of divider (0.0-1.0, default: 0.8)
+        gradient: List of hex colors for gradient (e.g., ['FF0000', '00FF00', '0000FF'])
+        scrubber_image: Path to scrubber image (GIF/webp for animated scrubber)
         
     Returns:
         List of command arguments for subprocess
@@ -379,13 +449,22 @@ def generate_ffmpeg_command(
         
         # 生成底层圆角矩形（全宽，带章节分隔线和文字）
         bg_img_path = os.path.join(temp_dir, 'bg.png')
-        create_rounded_bar_with_text(
-            width, height, bg_color, bg_alpha, corner_radius, bg_img_path,
-            chapters=chapters,
-            duration=duration,
-            divider_width=divider_width,
-            divider_height_ratio=divider_height_ratio
-        )
+        
+        # 判断是否使用渐变
+        if gradient:
+            # 渐变模式
+            create_gradient_bar(
+                width, height, gradient, bg_alpha, corner_radius, bg_img_path
+            )
+        else:
+            # 纯色模式
+            create_rounded_bar_with_text(
+                width, height, bg_color, bg_alpha, corner_radius, bg_img_path,
+                chapters=chapters,
+                duration=duration,
+                divider_width=divider_width,
+                divider_height_ratio=divider_height_ratio
+            )
         
         # 生成不同宽度的进度条圆角矩形
         num_segments = int(duration / segment_interval) + 1
@@ -405,7 +484,16 @@ def generate_ffmpeg_command(
             
             if bar_width > 0:
                 bar_img_path = os.path.join(temp_dir, f'bar_{i}.png')
-                create_rounded_rect(bar_width, height, fg_color, fg_alpha, corner_radius, bar_img_path)
+                
+                if gradient:
+                    # 渐变模式：裁剪渐变图片
+                    create_gradient_bar(
+                        bar_width, height, gradient, fg_alpha, corner_radius, bar_img_path
+                    )
+                else:
+                    # 纯色模式
+                    create_rounded_rect(bar_width, height, fg_color, fg_alpha, corner_radius, bar_img_path)
+                
                 input_args.extend(["-i", bar_img_path])
                 bar_data.append((start_time, end_time))
         
@@ -424,6 +512,21 @@ def generate_ffmpeg_command(
                 f"[{prev_output}][{input_idx}:v]overlay=y={y_expr}:x=0:enable='between(t,{start_time},{end_time})'[v{idx+1}]"
             )
             prev_output = f"v{idx+1}"
+        
+        # 添加动态拖拽头（如果有）
+        if scrubber_image:
+            # 添加拖拽头图片作为输入
+            input_args.extend(["-i", scrubber_image])
+            scrubber_idx = len(bar_data) + 2  # 拖拽头输入索引
+            
+            # 拖拽头跟随进度条移动：x = w * t / T
+            # y 坐标：进度条中间
+            scrubber_y = f"H-{height//2}"
+            
+            overlay_parts.append(
+                f"[{prev_output}][{scrubber_idx}:v]overlay=y={scrubber_y}:x='w*t/{duration}':enable='between(t,0,{duration})'[v_scrubber]"
+            )
+            prev_output = "v_scrubber"
         
         filter_complex = ";".join(overlay_parts)
         
@@ -546,15 +649,17 @@ def add_progress_bar(
     output_path: str,
     position: str,
     height: int,
-    bg_color: str,
-    fg_color: str,
+    bg_color: str = None,
+    fg_color: str = None,
     bg_alpha: float = 1.0,
     fg_alpha: float = 1.0,
     segment_interval: int = 1,
     corner_radius: int = 0,
     chapters: list = None,
     divider_width: int = 3,
-    divider_height_ratio: float = 0.8
+    divider_height_ratio: float = 0.8,
+    gradient: list = None,
+    scrubber_image: str = None
 ) -> bool:
     """Add progress bar to video using FFmpeg.
     
@@ -572,6 +677,8 @@ def add_progress_bar(
         chapters: List of chapter definitions
         divider_width: Width of chapter divider lines in pixels (default: 3)
         divider_height_ratio: Height ratio of divider (0.0-1.0, default: 0.8)
+        gradient: List of hex colors for gradient
+        scrubber_image: Path to scrubber image (GIF/webp)
         
     Returns:
         True if successful, False otherwise
@@ -609,7 +716,9 @@ def add_progress_bar(
             corner_radius=corner_radius,
             chapters=chapters,
             divider_width=divider_width,
-            divider_height_ratio=divider_height_ratio
+            divider_height_ratio=divider_height_ratio,
+            gradient=gradient,
+            scrubber_image=scrubber_image
         )
         
         print("Processing video with FFmpeg...")
@@ -785,6 +894,20 @@ Examples:
         help="Height ratio of divider relative to progress bar height, 0.0-1.0 (default: 0.8)"
     )
     
+    parser.add_argument(
+        "--gradient",
+        type=str,
+        default=None,
+        help="Gradient colors in format: 'FF0000,00FF00,0000FF' (overrides style gradient)"
+    )
+    
+    parser.add_argument(
+        "--scrubber-image",
+        type=str,
+        default=None,
+        help="Path to scrubber image (GIF/webp for animated scrubber, follows progress bar)"
+    )
+    
     args = parser.parse_args()
     
     # Parse chapters argument
@@ -813,6 +936,15 @@ Examples:
     bg_alpha = args.bg_alpha if args.bg_alpha is not None else style_config.get("bg_alpha", 1.0)
     fg_alpha = args.fg_alpha if args.fg_alpha is not None else style_config.get("fg_alpha", 1.0)
     corner_radius = args.corner_radius if args.corner_radius is not None else style_config.get("corner_radius", 0)
+    
+    # Parse gradient
+    gradient = None
+    if args.gradient:
+        gradient = [c.strip() for c in args.gradient.split(',')]
+    elif "gradient" in style_config:
+        gradient = style_config["gradient"]
+    
+    scrubber_image = args.scrubber_image
     
     input_path = args.input
     output_path = args.output
@@ -847,7 +979,9 @@ Examples:
         corner_radius=corner_radius,
         chapters=chapters,
         divider_width=args.divider_width,
-        divider_height_ratio=args.divider_height_ratio
+        divider_height_ratio=args.divider_height_ratio,
+        gradient=gradient,
+        scrubber_image=scrubber_image
     )
     
     if success:

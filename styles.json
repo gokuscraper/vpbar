@@ -46,6 +46,51 @@
       "height": 50,
       "position": "bottom",
       "corner_radius": 15
+    },
+    
+    "彩虹": {
+      "_说明": "彩虹渐变进度条",
+      "gradient": ["FF0000", "FF9900", "FFFF00", "33FF00", "0099FF", "6633FF"],
+      "bg_alpha": 0.4,
+      "height": 50,
+      "position": "bottom",
+      "corner_radius": 15
+    },
+    
+    "星战光剑红": {
+      "_说明": "星战西斯光剑渐变",
+      "gradient": ["EA2525", "FFFFFF", "FF898C", "EA2525"],
+      "bg_alpha": 0.4,
+      "height": 50,
+      "position": "bottom",
+      "corner_radius": 15
+    },
+    
+    "星战光剑蓝": {
+      "_说明": "星战绝地光剑渐变",
+      "gradient": ["1DC7FF", "FFFFFF", "B4EBFF", "1DC7FF"],
+      "bg_alpha": 0.4,
+      "height": 50,
+      "position": "bottom",
+      "corner_radius": 15
+    },
+    
+    "火焰": {
+      "_说明": "火焰渐变",
+      "gradient": ["FFBB22", "FFAD1A", "FF6E19", "FF5C29", "FF573E", "FF032D"],
+      "bg_alpha": 0.4,
+      "height": 50,
+      "position": "bottom",
+      "corner_radius": 15
+    },
+    
+    "海洋": {
+      "_说明": "海洋渐变",
+      "gradient": ["C5F3FF", "B6E5FF", "A4D5FF", "8BC1FF", "72B3FF"],
+      "bg_alpha": 0.4,
+      "height": 50,
+      "position": "bottom",
+      "corner_radius": 15
     }
   },
   
