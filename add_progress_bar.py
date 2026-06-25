@@ -533,8 +533,9 @@ def generate_ffmpeg_command(
             
             # 拖拽头跟随进度条移动
             # x: 从左到右移动，(W-w)*t/T，W是视频宽度，w是拖拽头宽度
-            # y: 进度条位置
-            scrubber_y = f"H-{height}"
+            # y: 进度条中间，考虑拖拽头大小
+            # 进度条中心 = H - height/2，拖拽头中心对齐进度条中心
+            scrubber_y = f"H-{height//2 + scrubber_size//2}"
             
             # 使用 scale 滤镜缩放拖拽头，然后 overlay
             overlay_parts.append(
