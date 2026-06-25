@@ -528,8 +528,8 @@ def generate_ffmpeg_command(
             input_args.extend(["-stream_loop", str(loop_count), "-i", scrubber_image])
             scrubber_idx = len(bar_data) + 2  # 拖拽头输入索引
             
-            # 缩放拖拽头图片到进度条高度
-            scrubber_size = height
+            # 缩放拖拽头图片到进度条高度的 1.5 倍
+            scrubber_size = int(height * 1.5)
             
             # 拖拽头跟随进度条移动
             # x: 从左到右移动，(W-w)*t/T，W是视频宽度，w是拖拽头宽度
