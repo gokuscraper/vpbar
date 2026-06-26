@@ -222,7 +222,8 @@ def create_rounded_bar_with_text(
     chapters: list = None,
     duration: float = None,
     divider_width: int = 3,
-    divider_height_ratio: float = 0.8
+    divider_height_ratio: float = 0.8,
+    draw_text: bool = True
 ):
     """Create a rounded rectangle with chapter dividers and text labels.
     
@@ -237,6 +238,7 @@ def create_rounded_bar_with_text(
         duration: Video duration in seconds
         divider_width: Width of divider lines
         divider_height_ratio: Height ratio of dividers
+        draw_text: Whether to draw text labels (default: True)
     """
     if not PIL_AVAILABLE:
         raise ImportError("PIL/Pillow is required for rounded corners")
@@ -292,17 +294,18 @@ def create_rounded_bar_with_text(
                 fill=(0, 0, 0, 255)  # 黑色
             )
         
-        # 绘制文字标签
-        for chapter in chapters:
-            if not chapter.get('label'):
-                continue
-            
-            mid_time = (chapter['start'] + chapter['end']) / 2
-            text_x = int(width * (mid_time / duration))
-            
-            # 使用 anchor='mm' 实现水平和垂直居中
-            draw.text((text_x, height // 2), chapter['label'], 
-                     fill=(0, 0, 0, 255), font=font, anchor='mm')
+        # 绘制文字标签（可选）
+        if draw_text:
+            for chapter in chapters:
+                if not chapter.get('label'):
+                    continue
+                
+                mid_time = (chapter['start'] + chapter['end']) / 2
+                text_x = int(width * (mid_time / duration))
+                
+                # 使用 anchor='mm' 实现水平和垂直居中
+                draw.text((text_x, height // 2), chapter['label'], 
+                         fill=(0, 0, 0, 255), font=font, anchor='mm')
     
     img.save(output_path, 'PNG')
 
@@ -447,15 +450,17 @@ def generate_ffmpeg_command(
         temp_dir = os.path.join(temp_base, 'progress_bar_temp')
         os.makedirs(temp_dir, exist_ok=True)
         
-        # 生成底层圆角矩形（全宽，带章节分隔线和文字）
+        # 生成底层圆角矩形（全宽，不带分隔线和文字）
         # 背景条始终使用固定颜色，不使用渐变
+        # 分隔线和文字将在滤镜链最后绘制，确保永远在最上层
         bg_img_path = os.path.join(temp_dir, 'bg.png')
         create_rounded_bar_with_text(
             width, height, bg_color, bg_alpha, corner_radius, bg_img_path,
-            chapters=chapters,
+            chapters=None,  # 不绘制分隔线和文字
             duration=duration,
             divider_width=divider_width,
-            divider_height_ratio=divider_height_ratio
+            divider_height_ratio=divider_height_ratio,
+            draw_text=False
         )
         
         # 生成不同宽度的进度条圆角矩形
@@ -543,6 +548,75 @@ def generate_ffmpeg_command(
                 f"[{scrubber_idx}:v]scale={scrubber_size}:{scrubber_size}:flags=neighbor[scrubber_scaled];[{prev_output}][scrubber_scaled]overlay=y={scrubber_y}:x='(W-w)*t/{duration}'[v_scrubber]"
             )
             prev_output = "v_scrubber"
+        
+        # 在最后绘制章节分隔线和文字，确保永远在最上层
+        if chapters:
+            # 准备字体文件
+            font_paths = prepare_fonts()
+            
+            # 选择字体：中文使用思源黑体，英文使用 Roboto
+            has_chinese = any('\u4e00' <= char <= '\u9fff' for chapter in chapters if chapter.get('label') for char in chapter['label'])
+            
+            if has_chinese and 'chinese' in font_paths:
+                font_path = font_paths['chinese']
+            elif 'english' in font_paths:
+                font_path = font_paths['english']
+            else:
+                # 回退到系统字体
+                font_path = Path("C:/Windows/Fonts/msyh.ttc")
+            
+            # 转换为 FFmpeg 可接受的路径格式
+            # Windows 路径需要转义冒号：C:/path -> C\\:/path
+            font_path_str = str(font_path).replace('\\', '/')
+            if len(font_path_str) > 1 and font_path_str[1] == ':':
+                font_path_str = font_path_str[0] + '\\\\:' + font_path_str[2:]
+            
+            # 计算字体大小（根据进度条高度）
+            font_size = max(10, int(height * 0.5))
+            
+            # 分隔线高度
+            divider_height = int(height * divider_height_ratio)
+            divider_y_offset = (height - divider_height) // 2
+            
+            # 构建绘制命令列表
+            draw_commands = []
+            
+            # 计算分隔线和文字的固定 y 坐标
+            # 视频高度已知，直接计算数值
+            video_height = video_info['height']
+            divider_y_value = video_height - height + divider_y_offset
+            
+            # 1. 绘制分隔线（在所有内容之上）
+            for i, chapter in enumerate(chapters[:-1]):
+                divider_x = int(width * (chapter['end'] / duration))
+                draw_commands.append(
+                    f"drawbox=x={divider_x-divider_width//2}:y={divider_y_value}:color=black:w={divider_width}:h={divider_height}:t=fill"
+                )
+            
+            # 2. 绘制文字标签（在所有内容之上）
+            for chapter in chapters:
+                if not chapter.get('label'):
+                    continue
+                
+                # 文字位置：章节中间
+                mid_time = (chapter['start'] + chapter['end']) / 2
+                text_x = int(width * (mid_time / duration))
+                
+                # 文字 y 坐标：进度条中间，考虑文字高度
+                # drawtext 的 y 是基线，需要上移
+                text_y_offset = height // 2 + font_size // 4
+                text_y = f"H-{text_y_offset}"
+                
+                # 使用 drawtext 滤镜绘制文字
+                draw_commands.append(
+                    f"drawtext=text='{chapter['label']}':fontcolor=black:fontsize={font_size}:x={text_x}:y={text_y}:fontfile={font_path_str}:shadowcolor=white@0.8:shadowx=1:shadowy=1"
+                )
+            
+            # 将绘制命令添加到滤镜链
+            if draw_commands:
+                draw_filter = ",".join(draw_commands)
+                overlay_parts.append(f"[{prev_output}]{draw_filter}[v_final]")
+                prev_output = "v_final"
         
         filter_complex = ";".join(overlay_parts)
         
