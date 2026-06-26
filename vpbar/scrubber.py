@@ -1,5 +1,7 @@
 """Scrubber GIF handling - duration info and loop count calculation."""
 
+import math
+
 try:
     from PIL import Image
     PIL_AVAILABLE = True
@@ -29,7 +31,12 @@ def get_gif_info(gif_path: str) -> dict:
 
 
 def calculate_loop_count(gif_duration: float, video_duration: float) -> int:
-    """Calculate how many times to loop the GIF to cover the video duration."""
+    """Calculate minimum loop count to cover the video duration.
+    
+    -stream_loop N plays the GIF once + N additional loops.
+    Minimum N so that (N+1) * gif_duration >= video_duration.
+    """
     if gif_duration <= 0:
         return 100
-    return int(video_duration / gif_duration) + 2
+    needed = math.ceil(video_duration / gif_duration) - 1
+    return max(0, needed)

@@ -192,7 +192,9 @@ def build_rounded_command(
     cmd = ["ffmpeg"] + input_args + [
         "-filter_complex", filter_complex,
         "-map", f"[{prev_output}]",
+        "-map", "0:a?",
         "-c:a", "copy",
+        "-t", str(duration),
         "-y", output_path
     ]
     return cmd, None
