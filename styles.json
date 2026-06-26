@@ -91,6 +91,150 @@
       "height": 50,
       "position": "bottom",
       "corner_radius": 15
+    },
+    
+    "红橙": {
+      "_说明": "红橙渐变",
+      "gradient": ["980000", "ED9827"],
+      "bg_alpha": 0.4,
+      "height": 50,
+      "position": "bottom",
+      "corner_radius": 15
+    },
+    
+    "红心": {
+      "_说明": "像素红心渐变",
+      "gradient": ["FF4F48", "FF3531"],
+      "bg_alpha": 0.4,
+      "height": 50,
+      "position": "bottom",
+      "corner_radius": 15
+    },
+    
+    "白绿": {
+      "_说明": "飞钱渐变",
+      "gradient": ["FFFFFF", "5DF166"],
+      "bg_alpha": 0.4,
+      "height": 50,
+      "position": "bottom",
+      "corner_radius": 15
+    },
+    
+    "足球": {
+      "_说明": "足球渐变",
+      "gradient": ["417E1B", "8ED447", "417E1B"],
+      "bg_alpha": 0.4,
+      "height": 50,
+      "position": "bottom",
+      "corner_radius": 15
+    },
+    
+    "浅黄": {
+      "_说明": "气泡女孩",
+      "gradient": ["FFFE9B"],
+      "bg_alpha": 0.4,
+      "height": 50,
+      "position": "bottom",
+      "corner_radius": 15
+    },
+    
+    "粉红": {
+      "_说明": "丘比特猫咪",
+      "gradient": ["FF8BB2"],
+      "bg_alpha": 0.4,
+      "height": 50,
+      "position": "bottom",
+      "corner_radius": 15
+    },
+    
+    "紫粉": {
+      "_说明": "Hello Kitty",
+      "gradient": ["FF76F5"],
+      "bg_alpha": 0.4,
+      "height": 50,
+      "position": "bottom",
+      "corner_radius": 15
+    },
+    
+    "黄橙": {
+      "_说明": "蝙蝠侠渐变",
+      "gradient": ["F1E767", "FEB645"],
+      "bg_alpha": 0.4,
+      "height": 50,
+      "position": "bottom",
+      "corner_radius": 15
+    },
+    
+    "冒险时光": {
+      "_说明": "冒险时光彩虹",
+      "gradient": ["EA0000", "FBED23", "01EE39", "3D7DE1"],
+      "bg_alpha": 0.4,
+      "height": 50,
+      "position": "bottom",
+      "corner_radius": 15
+    },
+    
+    "橙黄": {
+      "_说明": "Jake 渐变",
+      "gradient": ["FFCB5F", "FFBB1C"],
+      "bg_alpha": 0.4,
+      "height": 50,
+      "position": "bottom",
+      "corner_radius": 15
+    },
+    
+    "青绿": {
+      "_说明": "BMO 渐变",
+      "gradient": ["62B5A3", "3F96A2"],
+      "bg_alpha": 0.4,
+      "height": 50,
+      "position": "bottom",
+      "corner_radius": 15
+    },
+    
+    "紫色": {
+      "_说明": "Lumpy Princess",
+      "gradient": ["D575FF"],
+      "bg_alpha": 0.4,
+      "height": 50,
+      "position": "bottom",
+      "corner_radius": 15
+    },
+    
+    "橙红": {
+      "_说明": "Fire Wolf 渐变",
+      "gradient": ["FF8000", "FF0913"],
+      "bg_alpha": 0.4,
+      "height": 50,
+      "position": "bottom",
+      "corner_radius": 15
+    },
+    
+    "蓝色": {
+      "_说明": "Finn Jake",
+      "gradient": ["0191D0"],
+      "bg_alpha": 0.4,
+      "height": 50,
+      "position": "bottom",
+      "corner_radius": 15
+    },
+    
+    "游戏红": {
+      "_说明": "Mario/Sonic 渐变",
+      "gradient": ["FF6C54", "FF574E", "FF654B"],
+      "bg_alpha": 0.4,
+      "height": 50,
+      "position": "bottom",
+      "corner_radius": 15
+    },
+    
+    "吃豆人蓝": {
+      "_说明": "Pac-Man",
+      "gradient": ["2A27FF"],
+      "bg_alpha": 0.4,
+      "height": 50,
+      "position": "bottom",
+      "corner_radius": 15
     }
   },
   
