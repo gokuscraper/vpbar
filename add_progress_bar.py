@@ -537,9 +537,11 @@ def generate_ffmpeg_command(
             # 进度条中心 = H - height/2，拖拽头中心对齐进度条中心
             scrubber_y = f"H-{height//2 + scrubber_size//2}"
             
-            # 使用 scale 滤镜缩放拖拽头，然后 overlay
+            # 使用 scale 滤镜缩放拖拽头，添加 fps 控制帧率，format 处理透明度
+            # fps=10: 控制 GIF 帧率为 10fps，避免播放太快
+            # format=rgba: 确保正确处理透明度，避免重影
             overlay_parts.append(
-                f"[{scrubber_idx}:v]scale={scrubber_size}:{scrubber_size}[scrubber_scaled];[{prev_output}][scrubber_scaled]overlay=y={scrubber_y}:x='(W-w)*t/{duration}'[v_scrubber]"
+                f"[{scrubber_idx}:v]fps=10,scale={scrubber_size}:{scrubber_size}:flags=neighbor,format=rgba[scrubber_scaled];[{prev_output}][scrubber_scaled]overlay=y={scrubber_y}:x='(W-w)*t/{duration}'[v_scrubber]"
             )
             prev_output = "v_scrubber"
         
