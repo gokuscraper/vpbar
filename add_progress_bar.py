@@ -545,7 +545,7 @@ def generate_ffmpeg_command(
             # 使用 scale 滤镜缩放拖拽头
             # 不添加 fps、format 等滤镜，保持原始 GIF 的特性
             overlay_parts.append(
-                f"[{scrubber_idx}:v]scale={scrubber_size}:{scrubber_size}:flags=neighbor[scrubber_scaled];[{prev_output}][scrubber_scaled]overlay=y={scrubber_y}:x='(W-w)*t/{duration}'[v_scrubber]"
+                f"[{scrubber_idx}:v]scale=-1:{scrubber_size}:flags=neighbor[scrubber_scaled];[{prev_output}][scrubber_scaled]overlay=y={scrubber_y}:x='(W-w)*t/{duration}'[v_scrubber]"
             )
             prev_output = "v_scrubber"
         
