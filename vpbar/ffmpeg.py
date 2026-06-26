@@ -19,7 +19,7 @@ def build_bar_command(
     chapters: list = None,
     divider_width: int = 3, divider_height_ratio: float = 0.8,
     gradient: list = None, scrubber_image: str = None
-) -> tuple:
+) -> tuple[list[str], None]:
     duration = video_info['duration']
     width = video_info['width']
     video_height = video_info['height']
@@ -70,7 +70,7 @@ def build_bar_command(
         try:
             gif_info = get_gif_info(scrubber_image)
             loop_count = calculate_loop_count(gif_info["duration"], duration)
-        except:
+        except Exception:
             loop_count = 100
         input_args.extend(["-stream_loop", str(loop_count), "-i", scrubber_image])
         scrubber_idx = len(bar_data) + 2

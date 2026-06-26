@@ -31,7 +31,7 @@ def add_progress_bar(
         print(f"Video resolution: {video_info['width']}x{video_info['height']}")
         print("Generating FFmpeg command...")
 
-        cmd, filter_file = build_bar_command(
+        cmd, _ = build_bar_command(
             input_path=input_path, output_path=output_path,
             position=position, height=height,
             bg_color=bg_color, fg_color=fg_color,
@@ -51,11 +51,6 @@ def add_progress_bar(
             if result.stderr:
                 print(f"FFmpeg error: {result.stderr}", file=sys.stderr)
             return False
-        if filter_file and filter_file.exists():
-            try:
-                filter_file.unlink()
-            except:
-                pass
         print(f"Success! Output saved to: {output_path}")
         return True
     except (FileNotFoundError, RuntimeError) as e:
