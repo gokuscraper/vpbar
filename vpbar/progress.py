@@ -5,13 +5,7 @@ import sys
 from pathlib import Path
 
 from vpbar.video import get_video_info
-from vpbar.ffmpeg import build_square_command, build_rounded_command
-
-try:
-    from PIL import Image
-    PIL_AVAILABLE = True
-except ImportError:
-    PIL_AVAILABLE = False
+from vpbar.ffmpeg import build_bar_command
 
 
 def add_progress_bar(
@@ -37,31 +31,18 @@ def add_progress_bar(
         print(f"Video resolution: {video_info['width']}x{video_info['height']}")
         print("Generating FFmpeg command...")
 
-        use_rounded = corner_radius > 0 and PIL_AVAILABLE
-        if use_rounded:
-            cmd, filter_file = build_rounded_command(
-                input_path=input_path, output_path=output_path,
-                position=position, height=height,
-                bg_color=bg_color, fg_color=fg_color,
-                bg_alpha=bg_alpha, fg_alpha=fg_alpha,
-                segment_interval=segment_interval,
-                corner_radius=corner_radius,
-                chapters=chapters, divider_width=divider_width,
-                divider_height_ratio=divider_height_ratio,
-                gradient=gradient, scrubber_image=scrubber_image,
-                video_info=video_info
-            )
-        else:
-            cmd, filter_file = build_square_command(
-                input_path=input_path, output_path=output_path,
-                position=position, height=height,
-                bg_color=bg_color, fg_color=fg_color,
-                bg_alpha=bg_alpha, fg_alpha=fg_alpha,
-                segment_interval=segment_interval,
-                chapters=chapters, divider_width=divider_width,
-                divider_height_ratio=divider_height_ratio,
-                video_info=video_info
-            )
+        cmd, filter_file = build_bar_command(
+            input_path=input_path, output_path=output_path,
+            position=position, height=height,
+            bg_color=bg_color, fg_color=fg_color,
+            bg_alpha=bg_alpha, fg_alpha=fg_alpha,
+            segment_interval=segment_interval,
+            corner_radius=corner_radius,
+            chapters=chapters, divider_width=divider_width,
+            divider_height_ratio=divider_height_ratio,
+            gradient=gradient, scrubber_image=scrubber_image,
+            video_info=video_info
+        )
         print("Processing video with FFmpeg...")
         print(f"Command: {' '.join(str(c) for c in cmd[:8])} ...")
         result = subprocess.run(cmd, capture_output=True, encoding='utf-8', errors='replace')
