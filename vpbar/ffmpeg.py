@@ -99,12 +99,21 @@ def build_rounded_command(
 ):
     duration = video_info['duration']
     width = video_info['width']
+    video_height = video_info['height']
     temp_base = os.path.join(tempfile.gettempdir(), 'deveco')
     os.makedirs(temp_base, exist_ok=True)
     temp_dir = os.path.join(temp_base, 'progress_bar_temp')
     os.makedirs(temp_dir, exist_ok=True)
 
-    y_expr = f"H-{height}"
+    if position == 'top':
+        bar_y = "0"
+        bar_top_px = 0
+    elif position == 'middle':
+        bar_y = f"(H-{height})/2"
+        bar_top_px = (video_height - height) // 2
+    else:
+        bar_y = f"H-{height}"
+        bar_top_px = video_height - height
     bg_img_path = os.path.join(temp_dir, 'bg.png')
     create_rounded_bar_with_text(
         width, height, bg_color, bg_alpha, corner_radius, bg_img_path,
@@ -127,12 +136,12 @@ def build_rounded_command(
                 create_rounded_rect(bar_width, height, fg_color, fg_alpha, corner_radius, bar_img_path)
             input_args.extend(["-i", bar_img_path])
             bar_data.append((start_time, end_time))
-    overlay_parts = [f"[0:v][1:v]overlay=y={y_expr}:x=0[v0]"]
+    overlay_parts = [f"[0:v][1:v]overlay=y={bar_y}:x=0[v0]"]
     prev_output = "v0"
     for idx, (start_time, end_time) in enumerate(bar_data):
         input_idx = idx + 2
         overlay_parts.append(
-            f"[{prev_output}][{input_idx}:v]overlay=y={y_expr}:x=0:enable='between(t,{start_time},{end_time})'[v{idx+1}]"
+            f"[{prev_output}][{input_idx}:v]overlay=y={bar_y}:x=0:enable='between(t,{start_time},{end_time})'[v{idx+1}]"
         )
         prev_output = f"v{idx+1}"
     if scrubber_image:
@@ -144,7 +153,7 @@ def build_rounded_command(
         input_args.extend(["-stream_loop", str(loop_count), "-i", scrubber_image])
         scrubber_idx = len(bar_data) + 2
         scrubber_size = int(height * 1.2)
-        scrubber_y = f"H-{height//2 + scrubber_size//2}"
+        scrubber_y = f"{bar_y}+{height//2 - scrubber_size//2}"
         overlay_parts.append(
             f"[{scrubber_idx}:v]scale=-1:{scrubber_size}:flags=neighbor[scrubber_scaled];"
             f"[{prev_output}][scrubber_scaled]overlay=y={scrubber_y}:x='(W-w)*t/{duration}'[v_scrubber]"
@@ -166,8 +175,7 @@ def build_rounded_command(
         divider_height = int(height * divider_height_ratio)
         divider_y_offset = (height - divider_height) // 2
         draw_commands = []
-        video_height = video_info['height']
-        divider_y_value = video_height - height + divider_y_offset
+        divider_y_value = bar_top_px + divider_y_offset
         for i, chapter in enumerate(chapters[:-1]):
             divider_x = int(width * (chapter['end'] / duration))
             draw_commands.append(
@@ -178,8 +186,8 @@ def build_rounded_command(
                 continue
             mid_time = (chapter['start'] + chapter['end']) / 2
             text_x = int(width * (mid_time / duration))
-            text_y_offset = height // 2 + font_size // 4
-            text_y = f"H-{text_y_offset}"
+            text_y_offset = height // 2 - font_size // 4
+            text_y = f"{bar_y}+{text_y_offset}"
             draw_commands.append(
                 f"drawtext=text='{chapter['label']}':fontcolor=black:fontsize={font_size}:"
                 f"x={text_x}:y={text_y}:fontfile={font_path_str}:shadowcolor=white@0.8:shadowx=1:shadowy=1"
