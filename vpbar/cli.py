@@ -25,7 +25,8 @@ def build_progress_subparser(subparsers):
     add_parser.add_argument("--fg-color", type=str, default=None, help="Foreground hex color")
     add_parser.add_argument("--bg-alpha", type=float, default=None, help="Background opacity 0-1")
     add_parser.add_argument("--fg-alpha", type=float, default=None, help="Foreground opacity 0-1")
-    add_parser.add_argument("--segment-interval", type=int, default=1, help="Segment interval in seconds")
+    add_parser.add_argument("--segment-interval", type=int, default=0,
+                            help="Segment interval in seconds (0=auto based on video length)")
     add_parser.add_argument("--corner-radius", type=int, default=None, help="Corner radius in pixels")
     add_parser.add_argument("--chapters", type=str, default=None,
                             help="Chapters: '0-6:Intro,6-11:结尾'")

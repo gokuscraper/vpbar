@@ -13,7 +13,7 @@ def add_progress_bar(
     position: str = "bottom", height: int = 5,
     bg_color: str = "808080", fg_color: str = "FF0000",
     bg_alpha: float = 1.0, fg_alpha: float = 1.0,
-    segment_interval: int = 1, corner_radius: int = 0,
+    segment_interval: int = 0, corner_radius: int = 0,
     chapters: list = None, divider_width: int = 3,
     divider_height_ratio: float = 0.8, gradient: list = None,
     scrubber_image: str = None
@@ -29,6 +29,11 @@ def add_progress_bar(
         video_info = get_video_info(input_path)
         print(f"Video duration: {video_info['duration']:.2f} seconds")
         print(f"Video resolution: {video_info['width']}x{video_info['height']}")
+        if segment_interval <= 0:
+            target_segments = 30
+            segment_interval = max(2, int(video_info['duration'] / target_segments))
+            print(f"Auto segment interval: {segment_interval}s ({target_segments} segments)")
+
         print("Generating FFmpeg command...")
 
         cmd, _ = build_bar_command(
