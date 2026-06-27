@@ -140,14 +140,25 @@ with qt:
 # ════════════════════════════════════
 with pt:
     st.subheader("专业模式 — 三步工作流")
-    step = st.radio(
-        "步骤", ["① 转写", "② 章节", "③ 渲染"],
-        index=0, key="pro_step", horizontal=True,
-        label_visibility="collapsed",
-    )
+    cs1, cs2, cs3 = st.columns(3)
+    with cs1:
+        if st.button("① 转写", use_container_width=True,
+                     type="primary" if st.session_state.pro_step == "① 转写" else "secondary"):
+            st.session_state.pro_step = "① 转写"
+            st.rerun()
+    with cs2:
+        if st.button("② 章节", use_container_width=True,
+                     type="primary" if st.session_state.pro_step == "② 章节" else "secondary"):
+            st.session_state.pro_step = "② 章节"
+            st.rerun()
+    with cs3:
+        if st.button("③ 渲染", use_container_width=True,
+                     type="primary" if st.session_state.pro_step == "③ 渲染" else "secondary"):
+            st.session_state.pro_step = "③ 渲染"
+            st.rerun()
     st.divider()
 
-    if step == "① 转写":
+    if st.session_state.pro_step == "① 转写":
         p1e = st.selectbox("转写引擎", ["funasr", "whisper"], key="p1e")
         is_whisper = p1e == "whisper"
         p1m = st.selectbox("Whisper 模型", WHISPER_MODELS, key="p1m", disabled=not is_whisper)
@@ -171,7 +182,7 @@ with pt:
                 st.session_state.srt_content = Path(srt_out).read_text(encoding="utf-8")
                 st.success(f"转写完成 → {srt_out}")
 
-    elif step == "② 章节":
+    elif st.session_state.pro_step == "② 章节":
         up_srt = st.file_uploader("上传 SRT 文件", type=["srt"], key="p2srt")
         if up_srt:
             st.session_state.srt_path = save_upload(up_srt)
@@ -228,7 +239,7 @@ with pt:
 
             st.text_area("章节文本（也可直接粘贴）", st.session_state.chapters_text, height=130, key="p2raw")
 
-    elif step == "③ 渲染":
+    elif st.session_state.pro_step == "③ 渲染":
         c1, c2 = st.columns(2)
         with c1:
             p3s = st.selectbox("样式", STYLE_DISPLAY_NAMES, index=STYLE_DISPLAY_NAMES.index(DEFAULT_STYLE_DISPLAY), key="p3s")
