@@ -1,4 +1,28 @@
+from pathlib import Path
+
 import pytest
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--integration", action="store_true", default=False,
+        help="run integration tests (ffmpeg required)",
+    )
+
+
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers",
+        "integration: tests that run ffmpeg with real media files (opt-in with --integration)",
+    )
+
+
+def pytest_collection_modifyitems(config, items):
+    if not config.getoption("--integration"):
+        skip = pytest.mark.skip(reason="use --integration to run")
+        for item in items:
+            if item.get_closest_marker("integration"):
+                item.add_marker(skip)
 
 
 @pytest.fixture
@@ -24,3 +48,21 @@ def sample_video(tmp_path):
     path = tmp_path / "test.mp4"
     path.write_text("fake video content")
     return str(path)
+
+
+@pytest.fixture
+def fixtures() -> Path:
+    """Directory containing real fixture media files."""
+    return Path(__file__).parent / "fixtures"
+
+
+@pytest.fixture
+def test_video(fixtures) -> str:
+    """test.mp4 — 175s, has audio, primary integration test video."""
+    return str(fixtures / "test.mp4")
+
+
+@pytest.fixture
+def green_video(fixtures) -> str:
+    """green.mp4 — 10s, green screen only, no audio."""
+    return str(fixtures / "green.mp4")
