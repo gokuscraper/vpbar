@@ -58,7 +58,12 @@ def generate_chapters_from_srt(
 
     data = parse_llm_json(raw)
     if data is None:
-        return None
+        raw = call_llm(system_prompt, user_content)
+        if raw is None:
+            return None
+        data = parse_llm_json(raw)
+        if data is None:
+            return None
 
     chapters_str = ",".join(
         f"{c['start']:.1f}-{c['end']:.1f}:{c['label']}"

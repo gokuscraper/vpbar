@@ -71,7 +71,7 @@ call_llm(system_prompt: str, user_content: str) -> str | None
 - 使用 `openai` 库，`base_url="https://opencode.ai/zen/v1"`
 - API Key 从环境变量 `OPENCODE_API_KEY` 读取
 - 模型：`deepseek-v4-flash-free`
-- 超时：30 秒
+- 超时：120 秒（大 SRT 文件需要更长时间）
 - 重试：最多 2 次
 - 返回：LLM 回复的原始文本，或 None（全部失败时）
 
