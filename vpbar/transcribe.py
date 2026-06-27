@@ -121,7 +121,7 @@ def _get_audio_duration(audio_path: str) -> float:
 
 def _get_onnx_model_dir(cache_dir: str) -> str:
     """Return path to ONNX quantized model, auto-download if missing."""
-    onnx_dir = os.path.join(cache_dir, "models", "iic", "SenseVoiceSmall-onnx")
+    onnx_dir = os.path.join(cache_dir, "iic", "SenseVoiceSmall-onnx")
     if not os.path.isdir(onnx_dir):
         print("Downloading ONNX quantized model from ModelScope...")
         try:
@@ -130,12 +130,14 @@ def _get_onnx_model_dir(cache_dir: str) -> str:
         except Exception as e:
             print(f"Failed to download ONNX model: {e}", file=__import__('sys').stderr)
             return ""
+    # Copy BPE model from PyTorch model directory if available
     pt_dir = os.path.join(cache_dir, "models", "iic", "SenseVoiceSmall")
     bpe_file = "chn_jpn_yue_eng_ko_spectok.bpe.model"
     if not os.path.isfile(os.path.join(onnx_dir, bpe_file)):
         src = os.path.join(pt_dir, bpe_file)
         if os.path.isfile(src):
             import shutil
+            os.makedirs(onnx_dir, exist_ok=True)
             shutil.copy2(src, os.path.join(onnx_dir, bpe_file))
     return onnx_dir
 
