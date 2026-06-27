@@ -13,9 +13,19 @@ MAX_RETRIES = 2
 def _get_api_key() -> str:
     key = os.environ.get("OPENCODE_API_KEY", "")
     if not key:
+        env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
+        if os.path.isfile(env_path):
+            with open(env_path) as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith("OPENCODE_API_KEY="):
+                        key = line.split("=", 1)[1].strip().strip("\"'")
+                        break
+    if not key:
         raise RuntimeError(
             "OPENCODE_API_KEY not set. "
-            "Run: $env:OPENCODE_API_KEY='sk-...'"
+            "Create a .env file with OPENCODE_API_KEY=sk-... in project root, "
+            "or run: $env:OPENCODE_API_KEY='sk-...'"
         )
     return key
 
