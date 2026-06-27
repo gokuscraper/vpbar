@@ -4,13 +4,13 @@
 
 ## 功能特性
 
-- ✅ **双层进度条**：底层静态条显示总时长，上层动态条显示播放进度
-- ✅ **位置可配置**：支持顶部或底部显示
-- ✅ **高度可配置**：自定义进度条高度（像素）
-- ✅ **颜色可配置**：自定义背景色和前景色（十六进制）
+- ✅ **双层动态进度条**：支持圆角/平角、渐变色、分段、章节标记
+- ✅ **AI 章节自动生成**：根据字幕内容自动分章，命名清晰通顺
+- ✅ **Whisper 语音转写**：一键从视频音频转录字幕，支持 GPU/CPU
+- ✅ **多种样式**：位置（顶部/中间/底部）、颜色、透明度、高度可配置
+- ✅ **拖拽头动画**：支持 GIF 拖拽头，增强视觉效果
 - ✅ **自动检测**：自动获取视频时长和分辨率
 - ✅ **音频保留**：自动复制音频流，无需重新编码
-- ✅ **格式支持**：支持所有 FFmpeg 支持的视频格式（mp4, mov, avi, mkv 等）
 
 ## 依赖要求
 
@@ -95,15 +95,38 @@ python add_progress_bar.py input.mp4 --bg-color 000000 --fg-color 00FF00
 python add_progress_bar.py input.mp4 --bg-color 333333 --fg-color 0066FF
 ```
 
+### AI 章节生成
+
+```bash
+# 从现有字幕文件生成章节
+vpbar chapters generate --srt subtitle.srt
+
+# 从视频直接转写+分章（一次性）
+vpbar progress add video.mp4 --transcribe --style 小A
+```
+
+### Whisper 语音转写
+
+```bash
+# 独立转写为 SRT 字幕
+vpbar transcribe video.mp4 -o subtitle.srt
+
+# 指定模型和设备
+vpbar transcribe video.mp4 --model large-v3-turbo --device cuda
+```
+
 ### 完整示例
 
 ```bash
-python add_progress_bar.py video.mp4 \
+vpbar progress add video.mp4 \
   -o result.mp4 \
   -p bottom \
   --height 8 \
   --bg-color 000000 \
-  --fg-color FF0000
+  --fg-color FF0000 \
+  --corner-radius 15 \
+  --scrubber-image scrubber.gif \
+  --transcribe
 ```
 
 ## 参数说明
@@ -119,6 +142,8 @@ python add_progress_bar.py video.mp4 \
 
 ## 性能
 
+### 进度条渲染
+
 在 **Windows 11, i7-13700H, 32GB RAM** 上测试，`--segment-interval` 自动（目标 30 段）：
 
 | 视频 | 时长 | 分辨率 | 耗时 | 倍率 |
@@ -127,6 +152,17 @@ python add_progress_bar.py video.mp4 \
 | 竖屏测试.mp4 | 472s (7′52″) | 720×1280 | ~100s | ~1.7× |
 
 瓶颈主要在 FFmpeg 编码阶段（`-preset medium` 默认）。加 `-preset ultrafast` 可缩至约 0.5× 实时，输出文件体积约 2-3 倍。
+
+### Whisper 语音转写
+
+**模型：** `large-v3-turbo` | **视频：** 472s（7′52″）720×1280 | **GPU：** NVIDIA RTX 3060
+
+| 设备 | 耗时 | 实时率 | 备注 |
+|------|------|--------|------|
+| **GPU (CUDA float16)** | **44s** | **10.77×** | 推荐，速度快 12 倍 |
+| CPU (float32) | 542s (9′) | 0.87× | 比实时还慢，不推荐 |
+
+GPU 转录 8 分钟视频仅需 44 秒，准确率极高（中英文混合场景 300 条字幕，仅少量同音字误差）。
 
 ## 技术原理
 
@@ -226,13 +262,22 @@ python add_progress_bar.py video.mp4 -p top --bg-color 000000 --fg-color 00FF00
 
 ```
 L:\视频进度条\
-├── add_progress_bar.py          # 主脚本
-├── test_generate_command.py     # 测试脚本
-├── README.md                    # 本文档
-└── docs/
-    └── superpowers/
-        └── specs/
-            └── 2026-06-23-video-progress-bar-design.md  # 设计文档
+├── vpbar/                       # 核心模块
+│   ├── cli.py                   # CLI 入口与子命令
+│   ├── config.py                # 配置加载
+│   ├── chapters.py              # 章节解析与 AI 生成
+│   ├── ffmpeg.py                # FFmpeg 命令构建
+│   ├── image.py                 # Pillow 图像处理
+│   ├── llm.py                   # LLM API 调用
+│   ├── progress.py              # 进度条逻辑
+│   ├── srt.py                   # SRT 字幕解析
+│   ├── transcribe.py            # Whisper 语音转写
+│   └── scrubber.py              # GIF 拖拽头处理
+├── models/                      # Whisper 模型缓存
+├── config.json                  # 样式配置
+├── styles.json                  # 样式定义
+├── pyproject.toml               # 项目配置与依赖
+└── README.md                    # 本文档
 ```
 
 ### 运行测试
