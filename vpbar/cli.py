@@ -75,6 +75,9 @@ def build_transcribe_subparser(subparsers):
     parser.add_argument("--model", type=str, default="large-v3-turbo", help="Whisper model size")
     parser.add_argument("--device", type=str, default="auto", choices=["auto", "cpu", "cuda"],
                         help="Device to run Whisper on")
+    parser.add_argument("--compute-type", type=str, default="default",
+                        choices=["default", "float16", "int8"],
+                        help="Compute type: default (auto), float16 (GPU), int8 (CPU quantization)")
     return parser
 
 
@@ -100,6 +103,7 @@ def main():
             srt_path=output,
             model_size=args.model,
             device=args.device,
+            compute_type=args.compute_type,
         )
         sys.exit(0 if result else 1)
 

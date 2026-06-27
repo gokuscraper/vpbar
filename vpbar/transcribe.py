@@ -14,11 +14,15 @@ def _seconds_to_srt_time(seconds: float) -> str:
     return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
 
 
+MODELS_DIR = Path(__file__).parent.parent / "models"
+
+
 def video_to_srt(
     video_path: str,
     srt_path: str,
     model_size: str = "large-v3-turbo",
     device: str = "auto",
+    compute_type: str = "default",
 ) -> str | None:
     try:
         from faster_whisper import WhisperModel
@@ -43,7 +47,6 @@ def video_to_srt(
         print("ffmpeg not found. Please ensure FFmpeg is installed.", file=__import__('sys').stderr)
         return None
 
-    compute_type = "default"
     if device == "auto":
         try:
             import torch
@@ -51,12 +54,13 @@ def video_to_srt(
         except ImportError:
             device = "cpu"
 
-    if device == "cuda":
-        compute_type = "float16"
+    if compute_type == "default":
+        compute_type = "float16" if device == "cuda" else "default"
 
-    print(f"Loading Whisper model: {model_size} (device={device})")
+    print(f"Loading Whisper model: {model_size} (device={device}, compute_type={compute_type})")
+    model_dir = str(MODELS_DIR / model_size)
     try:
-        model = WhisperModel(model_size, device=device, compute_type=compute_type)
+        model = WhisperModel(model_size, device=device, compute_type=compute_type, download_root=model_dir)
     except Exception as e:
         print(f"Failed to load Whisper model: {e}", file=__import__('sys').stderr)
         return None
