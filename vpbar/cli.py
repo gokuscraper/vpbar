@@ -2,6 +2,7 @@
 
 import argparse
 import sys
+from pathlib import Path
 
 from vpbar.config import load_config, load_styles, merge_with_style
 from vpbar.chapters import parse_chapters
@@ -38,6 +39,8 @@ def build_progress_subparser(subparsers):
     add_parser.add_argument("--scrubber-image", type=str, default=None,
                             help="Path to scrubber GIF")
     add_parser.add_argument("--srt", type=str, default=None, help="SRT subtitle file for auto-chaptering")
+    add_parser.add_argument("--transcribe", type=str, default=None, const="large-v3-turbo", nargs="?",
+                            help="Transcribe audio to SRT using Whisper (optional: model size, default: large-v3-turbo)")
     return add_parser
 
 
@@ -65,6 +68,16 @@ def build_chapters_subparser(subparsers):
     return gen_parser
 
 
+def build_transcribe_subparser(subparsers):
+    parser = subparsers.add_parser("transcribe", help="Transcribe video audio to SRT using Whisper")
+    parser.add_argument("input", type=str, help="Input video file")
+    parser.add_argument("-o", "--output", type=str, default=None, help="Output SRT path (default: input.srt)")
+    parser.add_argument("--model", type=str, default="large-v3-turbo", help="Whisper model size")
+    parser.add_argument("--device", type=str, default="auto", choices=["auto", "cpu", "cuda"],
+                        help="Device to run Whisper on")
+    return parser
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="vpbar",
@@ -74,7 +87,21 @@ def main():
     build_progress_subparser(subparsers)
     build_gif_subparser(subparsers)
     build_chapters_subparser(subparsers)
+    build_transcribe_subparser(subparsers)
     args = parser.parse_args()
+
+    if args.command == "transcribe":
+        from vpbar.transcribe import video_to_srt
+        output = args.output if args.output else str(Path(args.input).with_suffix('.srt'))
+
+
+        result = video_to_srt(
+            video_path=args.input,
+            srt_path=output,
+            model_size=args.model,
+            device=args.device,
+        )
+        sys.exit(0 if result else 1)
 
     if args.command == "chapters":
         if args.action == "generate":
@@ -101,6 +128,12 @@ def main():
             styles_config = load_styles()
             style_name = args.style or styles_config.get("default_style", "默认")
             merged = merge_with_style(vars(args), style_name, styles_config)
+            if args.transcribe:
+                from vpbar.transcribe import video_to_srt
+                temp_srt = str(Path(args.input).with_suffix('.srt'))
+                video_to_srt(video_path=args.input, srt_path=temp_srt, model_size=args.transcribe)
+                args.srt = temp_srt
+
             chapters_str = args.chapters
             if chapters_str is None and args.srt:
                 from vpbar.chapters import generate_chapters_from_srt
