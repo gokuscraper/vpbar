@@ -41,6 +41,8 @@ def build_progress_subparser(subparsers):
     add_parser.add_argument("--srt", type=str, default=None, help="SRT subtitle file for auto-chaptering")
     add_parser.add_argument("--transcribe", type=str, default=None, const="large-v3-turbo", nargs="?",
                             help="Transcribe audio to SRT using Whisper (optional: model size, default: large-v3-turbo)")
+    add_parser.add_argument("--engine", type=str, default="whisper", choices=["whisper", "funasr"],
+                            help="Transcription engine: whisper (GPU) or funasr (SenseVoiceSmall)")
     return add_parser
 
 
@@ -69,15 +71,17 @@ def build_chapters_subparser(subparsers):
 
 
 def build_transcribe_subparser(subparsers):
-    parser = subparsers.add_parser("transcribe", help="Transcribe video audio to SRT using Whisper")
+    parser = subparsers.add_parser("transcribe", help="Transcribe video audio to SRT")
     parser.add_argument("input", type=str, help="Input video file")
     parser.add_argument("-o", "--output", type=str, default=None, help="Output SRT path (default: input.srt)")
-    parser.add_argument("--model", type=str, default="large-v3-turbo", help="Whisper model size")
+    parser.add_argument("--engine", type=str, default="whisper", choices=["whisper", "funasr"],
+                        help="Transcription engine: whisper (GPU) or funasr (SenseVoiceSmall)")
+    parser.add_argument("--model", type=str, default="large-v3-turbo", help="Whisper model size (whisper engine)")
     parser.add_argument("--device", type=str, default="auto", choices=["auto", "cpu", "cuda"],
-                        help="Device to run Whisper on")
+                        help="Device to run on")
     parser.add_argument("--compute-type", type=str, default="default",
                         choices=["default", "float16", "int8"],
-                        help="Compute type: default (auto), float16 (GPU), int8 (CPU quantization)")
+                        help="Compute type: default (auto), float16 (GPU), int8 (CPU quantization, whisper only)")
     return parser
 
 
@@ -104,6 +108,7 @@ def main():
             model_size=args.model,
             device=args.device,
             compute_type=args.compute_type,
+            engine=args.engine,
         )
         sys.exit(0 if result else 1)
 
@@ -135,7 +140,7 @@ def main():
             if args.transcribe:
                 from vpbar.transcribe import video_to_srt
                 temp_srt = str(Path(args.input).with_suffix('.srt'))
-                video_to_srt(video_path=args.input, srt_path=temp_srt, model_size=args.transcribe)
+                video_to_srt(video_path=args.input, srt_path=temp_srt, model_size=args.transcribe, engine=args.engine)
                 args.srt = temp_srt
 
             chapters_str = args.chapters

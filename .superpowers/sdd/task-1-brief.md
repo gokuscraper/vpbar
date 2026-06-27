@@ -1,67 +1,70 @@
-### Task 1: Package scaffolding
+### Task 1: SRT 文件解析模块
 
 **Files:**
-- Create: `vpbar/__init__.py`
-- Create: `vpbar/__main__.py`
-- Create: `pyproject.toml`
+- Create: `vpbar/srt.py`
 
-**Interfaces:**
-- Produces: Runnable `python -m vpbar` that prints usage
+**Produces:**
+- `parse_srt(path: str) -> tuple[list[dict], float]`
+  - 返回值: `([{index, start_sec, end_sec, text}, ...], total_duration_sec)`
 
-- [ ] **Step 1: Create `vpbar/` package directory** (already exists when we create files)
+**Steps:**
 
-- [ ] **Step 2: Create `vpbar/__init__.py`**
-
-```python
-"""vpbar - Video Progress Bar CLI Tool."""
-```
-
-- [ ] **Step 3: Create `vpbar/__main__.py`**
+- [ ] **Step 1: 创建 `vpbar/srt.py`，写入 `parse_srt` 函数**
 
 ```python
-"""Allow running as python -m vpbar."""
-from vpbar.cli import main
+import re
 
-if __name__ == "__main__":
-    main()
+def parse_srt(path: str) -> tuple[list, float]:
+    with open(path, 'r', encoding='utf-8-sig') as f:
+        content = f.read()
+    blocks = re.split(r'\n\n+', content.strip())
+    entries = []
+    for block in blocks:
+        lines = block.strip().split('\n')
+        if len(lines) < 3:
+            continue
+        try:
+            time_line = lines[1]
+            match = re.match(
+                r'(\d{2}):(\d{2}):(\d{2})[,.](\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2})[,.](\d{3})',
+                time_line
+            )
+            if not match:
+                continue
+            def to_sec(h, m, s, ms):
+                return int(h)*3600 + int(m)*60 + int(s) + int(ms)/1000
+            start_sec = to_sec(*match.group(1,2,3,4))
+            end_sec = to_sec(*match.group(5,6,7,8))
+            text = '\n'.join(lines[2:])
+            entries.append({
+                'index': int(lines[0]),
+                'start_sec': start_sec,
+                'end_sec': end_sec,
+                'text': text.strip()
+            })
+        except (ValueError, IndexError):
+            continue
+    if not entries:
+        raise ValueError("No valid SRT entries found")
+    total_duration = entries[-1]['end_sec']
+    return entries, total_duration
 ```
 
-- [ ] **Step 4: Create `pyproject.toml`**
+- [ ] **Step 2: 测试验证**
 
-```toml
-[build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.backends._legacy:_Backend"
-
-[project]
-name = "vpbar"
-version = "0.1.0"
-requires-python = ">=3.8"
-dependencies = []
-
-[project.scripts]
-vpbar = "vpbar.cli:main"
-
-[tool.setuptools.packages.find]
-include = ["vpbar*"]
+```powershell
+python -c "from vpbar.srt import parse_srt; e, d = parse_srt('6月27日.srt'); print(f'{len(e)} entries, {d:.1f}s')"
 ```
 
-- [ ] **Step 5: Install in dev mode**
+期望输出：`271 entries, 471.1s`（或类似，取决于 SRT 最后时间）
+
+- [ ] **Step 3: 处理边界：空文件、格式错误、UTF-8 BOM**
+
+`parse_srt` 已用 `utf-8-sig` 处理 BOM，空文件会触发 `ValueError`。无需额外改动。
+
+- [ ] **Step 4: Commit**
 
 ```bash
-pip install -e .
-```
-
-- [ ] **Step 6: Verify it runs**
-
-```bash
-python -m vpbar
-# Should exit with non-zero and print: "usage: vpbar [-h] {progress,gif} ..."
-```
-
-- [ ] **Step 7: Commit**
-
-```bash
-git add vpbar/ pyproject.toml
-git commit -m "feat: scaffold vpbar package and pyproject.toml"
+git add vpbar/srt.py
+git commit -m "feat: add SRT file parser"
 ```

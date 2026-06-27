@@ -1,0 +1,69 @@
+git diff cf01401..1a20c19 --stat
+ .gitignore        |  6 ++++++
+ pyproject.toml    | 15 +++++++++++++++
+ vpbar/__init__.py |  1 +
+ vpbar/__main__.py |  5 +++++
+ vpbar/cli.py      |  4 ++++
+ 5 files changed, 31 insertions(+)
+
+diff --git a/.gitignore b/.gitignore
+new file mode 100644
+index 0000000..0163807
+--- /dev/null
++++ b/.gitignore
+@@ -0,0 +1,6 @@
++__pycache__/
++*.pyc
++*.pyo
++*.egg-info/
++dist/
++build/
+diff --git a/pyproject.toml b/pyproject.toml
+new file mode 100644
+index 0000000..f7f750d
+--- /dev/null
++++ b/pyproject.toml
+@@ -0,0 +1,15 @@
++[build-system]
++requires = ["setuptools>=61.0"]
++build-backend = "setuptools.build_meta"
++
++[project]
++name = "vpbar"
++version = "0.1.0"
++requires-python = ">=3.8"
++dependencies = []
++
++[project.scripts]
++vpbar = "vpbar.cli:main"
++
++[tool.setuptools.packages.find]
++include = ["vpbar*"]
+diff --git a/vpbar/__init__.py b/vpbar/__init__.py
+new file mode 100644
+index 0000000..a9dbd91
+--- /dev/null
++++ b/vpbar/__init__.py
+@@ -0,0 +1 @@
++"""vpbar - Video Progress Bar CLI Tool."""
+diff --git a/vpbar/__main__.py b/vpbar/__main__.py
+new file mode 100644
+index 0000000..c2135d5
+--- /dev/null
++++ b/vpbar/__main__.py
+@@ -0,0 +1,5 @@
++"""Allow running as python -m vpbar."""
++from vpbar.cli import main
++
++if __name__ == "__main__":
++    main()
+diff --git a/vpbar/cli.py b/vpbar/cli.py
+new file mode 100644
+index 0000000..6ca1862
+--- /dev/null
++++ b/vpbar/cli.py
+@@ -0,0 +1,4 @@
++"""CLI entry point - stub for scaffolding."""
++def main():
++    print("usage: vpbar [-h] {progress,gif} ...")
++    exit(1)

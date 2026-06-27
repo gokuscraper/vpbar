@@ -1,87 +1,113 @@
-### Task 2: Extract `config.py`
+### Task 2: LLM API 调用模块
 
 **Files:**
-- Create: `vpbar/config.py`
+- Create: `vpbar/llm.py`
+- Modify: `pyproject.toml`（加 openai 依赖）
 
-**Interfaces:**
-- Consumes: `config.json`, `styles.json` (file paths relative to project root)
-- Produces: `load_config() -> dict`, `load_styles() -> dict`, `merge_with_style(cli_args: dict, style_name: str) -> dict`
+**Produces:**
+- `call_llm(system_prompt: str, user_content: str) -> str | None`
+- `parse_llm_json(response: str) -> list[dict] | None`
 
-- [ ] **Step 1: Create `vpbar/config.py`**
+**Steps:**
+
+- [ ] **Step 1: 创建 `vpbar/llm.py`**
 
 ```python
-"""Configuration loading from config.json and styles.json."""
-
 import json
-import sys
-from pathlib import Path
+import os
+import re
+
+from openai import OpenAI
+
+API_BASE = "https://opencode.ai/zen/v1"
+MODEL = "deepseek-v4-flash-free"
+TIMEOUT = 30
+MAX_RETRIES = 2
 
 
-def load_config() -> dict:
-    config_path = Path(__file__).parent.parent / "config.json"
-    if config_path.exists():
+def _get_api_key() -> str:
+    key = os.environ.get("OPENCODE_API_KEY", "")
+    if not key:
+        raise RuntimeError(
+            "OPENCODE_API_KEY not set. "
+            "Run: \$env:OPENCODE_API_KEY='sk-...'"
+        )
+    return key
+
+
+def call_llm(system_prompt: str, user_content: str) -> str | None:
+    key = _get_api_key()
+    client = OpenAI(api_key=key, base_url=API_BASE, timeout=TIMEOUT)
+    for attempt in range(MAX_RETRIES + 1):
         try:
-            with open(config_path, 'r', encoding='utf-8') as f:
-                return json.load(f)
+            resp = client.chat.completions.create(
+                model=MODEL,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_content},
+                ],
+                temperature=0.3,
+            )
+            return resp.choices[0].message.content
         except Exception as e:
-            print(f"Warning: Failed to load config file: {e}", file=sys.stderr)
-    return {
-        "position": "bottom",
-        "height": 5,
-        "bg_color": "808080",
-        "fg_color": "FF0000",
-        "segment_interval": 1
-    }
+            if attempt < MAX_RETRIES:
+                continue
+            print(f"LLM API error after {MAX_RETRIES+1} attempts: {e}", file=__import__('sys').stderr)
+            return None
+    return None
 
 
-def load_styles() -> dict:
-    styles_path = Path(__file__).parent.parent / "styles.json"
-    if styles_path.exists():
-        try:
-            with open(styles_path, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except Exception as e:
-            print(f"Warning: Failed to load styles file: {e}", file=sys.stderr)
-    return {
-        "styles": {
-            "默认": {
-                "bg_color": "808080",
-                "bg_alpha": 1.0,
-                "fg_color": "FF0000",
-                "fg_alpha": 1.0,
-                "height": 5,
-                "position": "bottom"
-            }
-        },
-        "default_style": "默认",
-        "segment_interval": 1
-    }
-
-
-def merge_with_style(cli_args: dict, style_name: str, styles_config: dict) -> dict:
-    """Merge CLI args with style config. CLI args override style values."""
-    styles = styles_config.get("styles", {})
-    style_config = styles.get(style_name, {})
-    merged = {}
-    for key in ("position", "height", "bg_color", "fg_color", "bg_alpha", "fg_alpha", "corner_radius"):
-        merged[key] = cli_args.get(key) if cli_args.get(key) is not None else style_config.get(key)
-    # handle gradient separately
-    if cli_args.get("gradient"):
-        merged["gradient"] = cli_args["gradient"]
-    elif "gradient" in style_config:
-        merged["gradient"] = style_config["gradient"]
-    return merged
+def parse_llm_json(response: str) -> list[dict] | None:
+    text = response.strip()
+    if text.startswith("```"):
+        text = re.sub(r'^```(?:json)?\s*', '', text)
+        text = re.sub(r'\s*```$', '', text)
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(data, list):
+        return None
+    for item in data:
+        if not isinstance(item, dict):
+            return None
+        if 'start' not in item or 'end' not in item or 'label' not in item:
+            return None
+        if not isinstance(item['start'], (int, float)):
+            return None
+        if not isinstance(item['end'], (int, float)):
+            return None
+        if not isinstance(item['label'], str):
+            return None
+        if item['start'] >= item['end']:
+            return None
+    return data
 ```
 
-- [ ] **Step 2: Verify the module loads**
+- [ ] **Step 2: 修改 `pyproject.toml`**
 
-```bash
-python -c "from vpbar.config import load_config, load_styles, merge_with_style; print('ok')"
+在 `dependencies` 中追加 `"openai>=1.0.0"`。
+
+- [ ] **Step 3: 测试 API 调用**
+
+```powershell
+\$env:OPENCODE_API_KEY = "sk-7VXEMHbHvk56xtJiQ6EzHO3jaqVX0eEqfbLs2PBV0Yp1I9Z18nRGoD71EWFYwx7R"
+python -c "from vpbar.llm import call_llm, parse_llm_json; r=call_llm('Say hello in Chinese', 'Reply'); print(r)"
 ```
 
-- [ ] **Step 3: Commit**
+期望：打印 `你好` 或类似的 LLM 回复。
+
+- [ ] **Step 4: 测试 JSON 解析**
+
+```powershell
+python -c "from vpbar.llm import parse_llm_json; d=parse_llm_json('[{\"start\":0,\"end\":10,\"label\":\"test\"}]'); print(d)"
+```
+
+期望：`[{'start': 0, 'end': 10, 'label': 'test'}]`
+
+- [ ] **Step 5: Commit**
 
 ```bash
-git add vpbar/config.py
-git commit -m "feat: extract config loading into vpbar/config.py"
+git add vpbar/llm.py pyproject.toml
+git commit -m "feat: add LLM API caller and JSON parser"
 ```
