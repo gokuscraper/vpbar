@@ -152,12 +152,7 @@ with pt:
         p1c = st.selectbox("计算类型", ["default", "float16", "int8"], key="p1c",
                           disabled=not is_whisper, help=None if is_whisper else "仅 Whisper 支持")
 
-        up_srt = st.file_uploader("或直接上传已有 SRT", type=["srt"], key="p1srt")
-        if up_srt:
-            raw = up_srt.read().decode("utf-8")
-            st.session_state.srt_content = raw
-            st.session_state.srt_path = save_upload(up_srt)
-            st.success(f"已加载 SRT：{up_srt.name}")
+        st.info("已有字幕？前往 **② 章节** 页签直接上传 SRT 文件")
 
         if st.button("开始转写", type="primary", key="p1b"):
             srt_out = str(TEMP_DIR / f"{Path(uploaded_file.name).stem}.srt")
@@ -172,15 +167,22 @@ with pt:
                 st.session_state.srt_content = Path(srt_out).read_text(encoding="utf-8")
                 st.success(f"转写完成 → {srt_out}")
 
+    # ── Step 2: Chapters ──
+    with t2:
+        up_srt = st.file_uploader("上传 SRT 文件", type=["srt"], key="p2srt")
+        if up_srt:
+            raw = up_srt.read().decode("utf-8")
+            st.session_state.srt_content = raw
+            st.session_state.srt_path = save_upload(up_srt)
+            st.success(f"已加载 SRT：{up_srt.name}")
+
         if st.session_state.srt_content:
-            st.text_area("SRT 预览（可编辑）", st.session_state.srt_content, height=250, key="p1edit")
-            if st.button("保存 SRT 修改", key="p1save"):
-                st.session_state.srt_content = st.session_state.p1edit
+            st.text_area("SRT 预览（可编辑）", st.session_state.srt_content, height=200, key="p2edit")
+            if st.button("保存 SRT 修改", key="p2save"):
+                st.session_state.srt_content = st.session_state.p2edit
                 Path(st.session_state.srt_path).write_text(st.session_state.srt_content, encoding="utf-8")
                 st.toast("SRT 已保存", icon="✅")
 
-    # ── Step 2: Chapters ──
-    with t2:
         if not st.session_state.srt_content:
             st.warning("请先在第一步转写或上传 SRT 文件")
         else:
