@@ -198,6 +198,10 @@ vpbar progress add video.mp4 \
 
 FFmpeg 渲染是主要瓶颈（占 55-62%），复杂度主要来自 GIF 叠加和渐变渲染。
 
+## 待实现
+
+- [ ] **macOS MLX Whisper 支持** — 参考 bilinote，使用 `mlx-whisper` 在 Apple Silicon 上利用 MLX 框架加速转写
+
 ## 技术原理
 
 ### 工作流程
