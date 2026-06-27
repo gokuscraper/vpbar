@@ -6,7 +6,8 @@ from pathlib import Path
 import streamlit as st
 
 from vpbar.gui_utils import (
-    PROJECT_ROOT, STYLES, DEFAULT_STYLE, TEMP_DIR, SCRUBBER_DIR, SCRUBBER_DEFAULT,
+    PROJECT_ROOT, STYLE_DISPLAY_NAMES, DEFAULT_STYLE_DISPLAY, resolve_style_name,
+    TEMP_DIR, SCRUBBER_DIR, SCRUBBER_DEFAULT,
     WHISPER_MODELS, get_video_duration, estimate_eta, run_cli_streaming,
     save_upload, parse_chapters, fmt_chapters, hex_no_hash, list_scrubbers,
 )
@@ -52,6 +53,9 @@ with col_r:
     op = st.session_state.output_path
     if op and os.path.isfile(op):
         st.video(op)
+        with open(op, "rb") as fb:
+            st.download_button("下载成品视频", fb, file_name=Path(op).name,
+                               mime="video/mp4", use_container_width=True)
     else:
         st.info("生成后这里显示结果")
 
@@ -67,7 +71,7 @@ with qt:
     with c1:
         q_eng = st.selectbox("转写引擎", ["funasr", "whisper"], key="q_eng")
     with c2:
-        q_sty = st.selectbox("样式", STYLES, index=STYLES.index(DEFAULT_STYLE), key="q_sty")
+        q_sty = st.selectbox("样式", STYLE_DISPLAY_NAMES, index=STYLE_DISPLAY_NAMES.index(DEFAULT_STYLE_DISPLAY), key="q_sty")
     with c3:
         q_out = st.text_input("输出文件名", key="q_out")
 
@@ -112,7 +116,7 @@ with qt:
         st.session_state.output_path = out_path
 
         cmd = ["progress", "add", st.session_state.video_path,
-               "-o", out_path, "--engine", q_eng, "--style", q_sty]
+               "-o", out_path, "--engine", q_eng, "--style", resolve_style_name(q_sty)]
 
         if q_gif and q_gif_path:
             cmd += ["--scrubber-image", q_gif_path]
@@ -128,8 +132,6 @@ with qt:
 
         if rc == 0:
             st.success("✅ 生成成功！")
-            with open(out_path, "rb") as fb:
-                st.download_button("下载成品视频", fb, file_name=out_name, mime="video/mp4", use_container_width=True)
             st.rerun()
         else:
             st.error(f"❌ 处理失败 (code={rc})")
@@ -223,7 +225,7 @@ with pt:
     with t3:
         c1, c2 = st.columns(2)
         with c1:
-            p3s = st.selectbox("样式", STYLES, index=STYLES.index(DEFAULT_STYLE), key="p3s")
+            p3s = st.selectbox("样式", STYLE_DISPLAY_NAMES, index=STYLE_DISPLAY_NAMES.index(DEFAULT_STYLE_DISPLAY), key="p3s")
         with c2:
             p3p = st.radio("位置", ["bottom", "top", "middle"], horizontal=True, key="p3p")
         p3h = st.slider("高度 (px)", 3, 50, 10, key="p3h")
@@ -272,7 +274,7 @@ with pt:
             st.session_state.output_path = out_path
 
             cmd = ["progress", "add", st.session_state.video_path, "-o", out_path,
-                   "--style", p3s, "--position", p3p, "--height", str(p3h),
+                   "--style", resolve_style_name(p3s), "--position", p3p, "--height", str(p3h),
                    "--bg-color", hex_no_hash(p3bg), "--fg-color", hex_no_hash(p3fg),
                    "--bg-alpha", str(p3ba), "--fg-alpha", str(p3fa),
                    "--corner-radius", str(p3cr), "--segment-interval", str(p3sg),
@@ -294,9 +296,6 @@ with pt:
 
             if rc == 0:
                 st.success("✅ 渲染成功！")
-                with open(out_path, "rb") as fb:
-                    st.download_button("下载成品视频", fb, file_name=out_name,
-                                       mime="video/mp4", use_container_width=True)
                 st.rerun()
             else:
                 st.error(f"❌ 渲染失败 (code={rc})")

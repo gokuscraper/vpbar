@@ -1,5 +1,6 @@
 """Utility functions for the Streamlit GUI — no Streamlit imports."""
 
+import json
 import os
 import re
 import subprocess
@@ -8,12 +9,42 @@ import tempfile
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-STYLES = [
-    "小A", "经典红", "抖音风", "圆角小A", "彩虹", "星战光剑红", "星战光剑蓝",
-    "火焰", "海洋", "红橙", "红心", "白绿", "足球", "浅黄", "粉红", "紫粉",
-    "黄橙", "冒险时光", "橙黄", "青绿", "紫色", "橙红", "蓝色", "游戏红", "吃豆人蓝",
-]
-DEFAULT_STYLE = "小A"
+
+
+def _load_style_defs() -> dict:
+    """Load styles.json and return {raw_name: config_dict}."""
+    path = PROJECT_ROOT / "styles.json"
+    if path.exists():
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data.get("styles", {})
+    return {}
+
+
+def _get_display_name(name: str, cfg: dict) -> str:
+    """Add [圆角]/[方角] prefix based on corner_radius."""
+    cr = cfg.get("corner_radius", 0)
+    tag = "[圆角]" if cr > 0 else "[方角]"
+    return f"{tag} {name}"
+
+
+# Build display list and raw-name lookup from styles.json
+_STYLE_DEFS = _load_style_defs()
+STYLE_DISPLAY_NAMES: list[str] = []
+STYLE_RAW_NAMES: dict[str, str] = {}  # display_name -> raw_name
+for raw_name, cfg in _STYLE_DEFS.items():
+    if raw_name.startswith("_"):
+        continue
+    display = _get_display_name(raw_name, cfg)
+    STYLE_DISPLAY_NAMES.append(display)
+    STYLE_RAW_NAMES[display] = raw_name
+
+DEFAULT_STYLE_DISPLAY = _get_display_name("小A", _STYLE_DEFS.get("小A", {}))
+
+
+def resolve_style_name(display_name: str) -> str:
+    """Convert display name ('[圆角] 小A') to raw name ('小A') for CLI."""
+    return STYLE_RAW_NAMES.get(display_name, display_name)
 TEMP_DIR = Path(tempfile.gettempdir()) / "deveco" / "gui"
 SCRUBBER_DIR = PROJECT_ROOT / "scrubbers" / "gif"
 SCRUBBER_DEFAULT = str(PROJECT_ROOT / "scrubber_final.gif")
