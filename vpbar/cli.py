@@ -37,6 +37,7 @@ def build_progress_subparser(subparsers):
                             help="Gradient colors: 'FF0000,00FF00,0000FF'")
     add_parser.add_argument("--scrubber-image", type=str, default=None,
                             help="Path to scrubber GIF")
+    add_parser.add_argument("--srt", type=str, default=None, help="SRT subtitle file for auto-chaptering")
     return add_parser
 
 
@@ -52,6 +53,18 @@ def build_gif_subparser(subparsers):
     return convert_parser
 
 
+def build_chapters_subparser(subparsers):
+    parser = subparsers.add_parser("chapters", help="Chapter operations")
+    sub = parser.add_subparsers(dest="action", required=True)
+    gen_parser = sub.add_parser("generate", help="Generate chapters from SRT using AI")
+    gen_parser.add_argument("--srt", type=str, required=True, help="SRT subtitle file path")
+    gen_parser.add_argument("-o", "--output", type=str, default=None, help="Save chapters to file")
+    gen_parser.add_argument("--min-chapters", type=int, default=2, help="Minimum chapters")
+    gen_parser.add_argument("--max-chapters", type=int, default=4, help="Maximum chapters")
+    gen_parser.add_argument("--max-label-length", type=int, default=5, help="Max label characters")
+    return gen_parser
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="vpbar",
@@ -60,14 +73,44 @@ def main():
     subparsers = parser.add_subparsers(dest="command", required=True)
     build_progress_subparser(subparsers)
     build_gif_subparser(subparsers)
+    build_chapters_subparser(subparsers)
     args = parser.parse_args()
+
+    if args.command == "chapters":
+        if args.action == "generate":
+            from vpbar.chapters import generate_chapters_from_srt
+            result = generate_chapters_from_srt(
+                srt_path=args.srt,
+                min_chapters=args.min_chapters,
+                max_chapters=args.max_chapters,
+                max_label_length=args.max_label_length,
+            )
+            if result is None:
+                print("Failed to generate chapters", file=sys.stderr)
+                sys.exit(1)
+            if args.output:
+                with open(args.output, 'w', encoding='utf-8') as f:
+                    f.write(result)
+                print(f"Chapters saved to: {args.output}")
+            else:
+                print(result)
+            sys.exit(0)
 
     if args.command == "progress":
         if args.action == "add":
             styles_config = load_styles()
             style_name = args.style or styles_config.get("default_style", "默认")
             merged = merge_with_style(vars(args), style_name, styles_config)
-            chapters = parse_chapters(args.chapters)
+            chapters_str = args.chapters
+            if chapters_str is None and args.srt:
+                from vpbar.chapters import generate_chapters_from_srt
+                result = generate_chapters_from_srt(srt_path=args.srt)
+                if result:
+                    chapters_str = result
+                    print(f"Auto-generated chapters: {result}")
+                else:
+                    print("Warning: Failed to auto-generate chapters, proceeding without chapters", file=sys.stderr)
+            chapters = parse_chapters(chapters_str)
             gradient = None
             if args.gradient:
                 gradient = [c.strip() for c in args.gradient.split(',')]
