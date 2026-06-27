@@ -6,7 +6,7 @@ from openai import OpenAI
 
 API_BASE = "https://opencode.ai/zen/v1"
 MODEL = "deepseek-v4-flash-free"
-TIMEOUT = 30
+TIMEOUT = 120
 MAX_RETRIES = 2
 
 
