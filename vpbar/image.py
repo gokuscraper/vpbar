@@ -15,6 +15,8 @@ def _parse_hex(color: str) -> tuple[int, int, int]:
     color = color.lstrip("#")
     if len(color) != 6:
         raise ValueError(f"Invalid hex color '{color}': must be 6 hex digits")
+    if not all(c in "0123456789ABCDEFabcdef" for c in color):
+        raise ValueError(f"Invalid hex color '{color}': must be hex digits only")
     return (int(color[0:2], 16), int(color[2:4], 16), int(color[4:6], 16))
 
 

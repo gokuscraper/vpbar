@@ -22,3 +22,11 @@ vpbar = "vpbar.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["vpbar*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[project.optional-dependencies]
+test = ["pytest>=7.0", "pytest-mock>=3.0"]
