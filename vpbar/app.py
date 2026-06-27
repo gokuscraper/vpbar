@@ -171,9 +171,8 @@ with pt:
     with t2:
         up_srt = st.file_uploader("上传 SRT 文件", type=["srt"], key="p2srt")
         if up_srt:
-            raw = up_srt.read().decode("utf-8")
-            st.session_state.srt_content = raw
             st.session_state.srt_path = save_upload(up_srt)
+            st.session_state.srt_content = Path(st.session_state.srt_path).read_text(encoding="utf-8")
             st.success(f"已加载 SRT：{up_srt.name}")
 
         if st.session_state.srt_content:
