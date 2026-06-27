@@ -245,7 +245,7 @@ with pt:
             p3s = st.selectbox("样式", STYLE_DISPLAY_NAMES, index=STYLE_DISPLAY_NAMES.index(DEFAULT_STYLE_DISPLAY), key="p3s")
         with c2:
             p3p = st.radio("位置", ["bottom", "top", "middle"], horizontal=True, key="p3p")
-        p3h = st.slider("高度 (px)", 3, 50, 10, key="p3h")
+        p3h = st.slider("高度 (px)", 3, 100, 50, key="p3h")
 
         p3cr = st.slider("圆角 (px)", 0, 25, 4, key="p3cr")
         p3gf = st.checkbox("GIF 拖拽头", value=True, key="p3gf")
