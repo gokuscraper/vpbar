@@ -1,4 +1,4 @@
-# 视频进度条 CLI 工具
+# vpbar — 视频进度条 CLI 工具
 
 一个基于 Python 和 FFmpeg 的命令行工具，用于给视频添加双层动态进度条，效果类似抖音视频播放器。
 
@@ -31,89 +31,101 @@ ffprobe -version
 
 ## 安装
 
-### 方式一：直接使用
-
-克隆或下载项目后直接运行：
+### 方式一：pip 安装（开发模式，推荐）
 
 ```bash
-python add_progress_bar.py input.mp4
+cd L:\vpbar
+pip install -e .
 ```
 
-### 方式二：添加到系统 PATH（可选）
+安装后 `vpbar` 命令全局可用。
 
-将脚本添加到系统 PATH 或创建别名：
+### 方式二：直接运行
 
 ```bash
-# Linux/macOS
-alias add-progress="python /path/to/add_progress_bar.py"
-
-# Windows (PowerShell)
-function add-progress { python L:\vpbaradd_progress_bar.py $args }
+python -m vpbar <命令> [参数]
 ```
+
+### 方式三：启动图形界面（GUI）
+
+先按方式一安装，然后：
+
+```bash
+streamlit run vpbar/app.py
+```
+
+也可以直接双击项目根目录的 `gui.bat`（Windows 专用，无需手动敲命令）。
 
 ## 使用方法
 
-### 基本用法
-
-最简单的用法，只需指定输入视频：
+### 基本用法 — 一键加进度条 + 转写 + 分章
 
 ```bash
-python add_progress_bar.py input.mp4
+vpbar progress add video.mp4 --transcribe --style 小A
 ```
 
-输出文件将自动命名为 `input_with_progress.mp4`，进度条显示在底部。
+自动转写语音为字幕，AI 分章，渲染进度条，一步完成。
 
 ### 指定输出路径
 
 ```bash
-python add_progress_bar.py input.mp4 -o output.mp4
+vpbar progress add video.mp4 -o output.mp4
 ```
 
-### 自定义进度条位置
+### 自定义进度条位置和样式
 
 ```bash
-# 显示在顶部
-python add_progress_bar.py input.mp4 -p top
+# 顶部 + 红色前景 + 圆角
+vpbar progress add video.mp4 -p top --fg-color FF0000 --corner-radius 15
 
-# 显示在底部（默认）
-python add_progress_bar.py input.mp4 -p bottom
+# 渐变色（三种颜色）
+vpbar progress add video.mp4 --gradient FF0000,00FF00,0000FF
 ```
 
-### 自定义进度条高度
+### 分步工作流
 
-```bash
-# 设置进度条高度为 10 像素
-python add_progress_bar.py input.mp4 --height 10
-```
-
-### 自定义颜色
-
-```bash
-# 黑色背景 + 绿色前景
-python add_progress_bar.py input.mp4 --bg-color 000000 --fg-color 00FF00
-
-# 深灰背景 + 蓝色前景
-python add_progress_bar.py input.mp4 --bg-color 333333 --fg-color 0066FF
-```
-
-### AI 章节生成
-
-```bash
-# 从现有字幕文件生成章节
-vpbar chapters generate --srt subtitle.srt
-
-# 从视频直接转写+分章（一次性）
-vpbar progress add video.mp4 --transcribe --style 小A
-```
-
-### Whisper 语音转写
+#### 1. 语音转写
 
 ```bash
 # 独立转写为 SRT 字幕
 vpbar transcribe video.mp4 -o subtitle.srt
 
-# 指定模型和设备
-vpbar transcribe video.mp4 --model large-v3-turbo --device cuda
+# 指定引擎和模型
+vpbar transcribe video.mp4 --engine funasr
+vpbar transcribe video.mp4 --engine whisper --model large-v3 --device cuda
+```
+
+#### 2. AI 章节生成
+
+```bash
+# 从现有字幕文件生成章节
+vpbar chapters generate --srt subtitle.srt --min-chapters 3 --max-chapters 5
+
+# 保存到文件
+vpbar chapters generate --srt subtitle.srt -o chapters.txt
+```
+
+#### 3. 渲染进度条
+
+```bash
+# 基本渲染
+vpbar progress add video.mp4 -o output.mp4 --style 小A
+
+# 带章节标记
+vpbar progress add video.mp4 --chapters "0-50:介绍,50-168:核心内容,168-390:进阶,390-472:总结"
+
+# 带 GIF 拖拽头
+vpbar progress add video.mp4 --scrubber-image scrubber.gif
+```
+
+### GIF 转换
+
+```bash
+# 视频转 GIF
+vpbar gif convert input.mp4 output.gif
+
+# 去绿幕
+vpbar gif convert input.mp4 output.gif --green-screen --green-threshold 180
 ```
 
 ### 完整示例
@@ -126,20 +138,80 @@ vpbar progress add video.mp4 \
   --bg-color 000000 \
   --fg-color FF0000 \
   --corner-radius 15 \
+  --gradient FF0000,FF8C00 \
   --scrubber-image scrubber.gif \
   --transcribe
 ```
 
-## 参数说明
+### Streamlit GUI 启动
 
-| 参数 | 简写 | 说明 | 默认值 |
-|------|------|------|--------|
-| `input` | - | 输入视频文件路径（必需） | - |
-| `--output` | `-o` | 输出视频文件路径 | `<input>_with_progress.<ext>` |
-| `--position` | `-p` | 进度条位置（`top` 或 `bottom`） | `bottom` |
-| `--height` | - | 进度条高度（像素） | `5` |
-| `--bg-color` | - | 背景颜色（十六进制，不含 #） | `808080`（灰色） |
-| `--fg-color` | - | 前景颜色（十六进制，不含 #） | `FF0000`（红色） |
+**Windows 用户：** 双击 `gui.bat` 一键启动。
+
+**命令行启动：**
+```bash
+streamlit run vpbar/app.py
+```
+
+支持双模式：
+- **快捷模式**：一键全自动（转写 + 分章 + 渲染）
+- **专业模式**：三步工作流（分别控制转写、章节、渲染参数）
+
+## 命令参考
+
+### `vpbar progress add` — 给视频加进度条
+
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| `input` | 输入视频路径（必需） | — |
+| `-o, --output` | 输出视频路径 | `<input>_with_progress.mp4` |
+| `--style` | 样式名称（见 styles.json） | `默认` |
+| `-p, --position` | 位置：`top`/`middle`/`bottom` | 样式默认 |
+| `--height` | 高度（像素） | 样式默认 |
+| `--bg-color` | 背景色（6位十六进制） | 样式默认 |
+| `--fg-color` | 前景色（6位十六进制） | 样式默认 |
+| `--bg-alpha` | 背景透明度 0-1 | 样式默认 |
+| `--fg-alpha` | 前景透明度 0-1 | 样式默认 |
+| `--corner-radius` | 圆角半径（像素） | 样式默认 |
+| `--gradient` | 渐变色：`FF0000,00FF00,0000FF` | 无 |
+| `--chapters` | 章节：`0-6:介绍,6-11:结尾` | 无 |
+| `--divider-width` | 章节分隔线宽度 | `3` |
+| `--divider-height-ratio` | 分隔线高度比例 0-1 | `0.8` |
+| `--segment-interval` | 分段间隔秒数（0=自动） | `0` |
+| `--scrubber-image` | GIF 拖拽头路径 | 无 |
+| `--transcribe` | 先转写（可选模型大小） | 无 |
+| `--engine` | 转写引擎：`whisper`/`funasr` | `whisper` |
+| `--srt` | 外部 SRT 字幕文件 | 无 |
+
+### `vpbar transcribe` — 语音转写
+
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| `input` | 输入视频路径（必需） | — |
+| `-o, --output` | 输出 SRT 路径 | `<input>.srt` |
+| `--engine` | 引擎：`whisper`/`funasr` | `whisper` |
+| `--model` | Whisper 模型大小 | `large-v3-turbo` |
+| `--device` | 设备：`auto`/`cpu`/`cuda` | `auto` |
+| `--compute-type` | 计算类型：`default`/`float16`/`int8` | `default` |
+
+### `vpbar chapters generate` — AI 分章
+
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| `--srt` | SRT 字幕路径（必需） | — |
+| `-o, --output` | 保存到文件 | 标准输出 |
+| `--min-chapters` | 最小章节数 | `2` |
+| `--max-chapters` | 最大章节数 | `4` |
+| `--max-label-length` | 标签最大字数 | `7` |
+
+### `vpbar gif convert` — 视频转 GIF
+
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| `input` | 输入视频路径（必需） | — |
+| `output` | 输出 GIF 路径（必需） | — |
+| `--height` | GIF 高度 | `60` |
+| `--green-screen` | 启用去绿幕 | `False` |
+| `--green-threshold` | 绿幕阈值 0-255 | `150` |
 
 ## 性能
 
@@ -293,7 +365,7 @@ drawbox=y=<position>:color=0x<fg_color>:w='iw*t/<duration>':h=<height>:t=fill
 ### 自定义效果（顶部黑色+绿色）
 
 ```bash
-python add_progress_bar.py video.mp4 -p top --bg-color 000000 --fg-color 00FF00
+vpbar progress add video.mp4 -p top --bg-color 000000 --fg-color 00FF00
 ```
 
 ## 开发
@@ -301,10 +373,11 @@ python add_progress_bar.py video.mp4 -p top --bg-color 000000 --fg-color 00FF00
 ### 项目结构
 
 ```
-L:\vpbar
+vpbar/
 ├── vpbar/                       # 核心模块
-│   ├── cli.py                   # CLI 入口与子命令
-│   ├── config.py                # 配置加载
+│   ├── cli.py                   # CLI 入口与子命令（main(argv) → int）
+│   ├── __main__.py              # python -m vpbar 入口
+│   ├── config.py                # 样式配置加载与合并
 │   ├── chapters.py              # 章节解析与 AI 生成
 │   ├── ffmpeg.py                # FFmpeg 命令构建
 │   ├── image.py                 # Pillow 图像处理
@@ -317,13 +390,16 @@ L:\vpbar
 │   ├── fonts.py                 # 字体管理
 │   ├── app.py                   # Streamlit GUI 入口
 │   └── gui_utils.py             # GUI 纯函数工具
+├── tests/                       # 测试
+│   ├── test_cli.py              # CLI 单元测试（44 个）
+│   ├── test_pure.py             # 纯函数单元测试（52 个）
+│   ├── test_integration.py      # 集成测试（7 个，opt-in）
+│   └── fixtures/                # 测试用视频/字幕
 ├── .streamlit/                  # Streamlit 配置
-│   └── config.toml
-├── models/                      # Whisper 模型缓存
-├── config.json                  # 样式配置
-├── styles.json                  # 样式定义
-├── scrubbers/                   # GIF 拖拽头模板库（87种）
-├── requirements.txt             # Python 依赖清单
+├── models/                      # Whisper/FunASR 模型缓存
+├── styles.json                  # 33 种进度条样式定义
+├── scrubbers/                   # 87 种 GIF 拖拽头模板
+├── fonts/                       # 字体文件
 ├── pyproject.toml               # 项目配置与依赖
 └── README.md                    # 本文档
 ```
@@ -331,8 +407,25 @@ L:\vpbar
 ### 运行测试
 
 ```bash
-python test_generate_command.py
+# 运行所有单元测试（96 个）
+python -m pytest tests/ -v
+
+# 运行集成测试（需要 ffmpeg + 真实视频）
+python -m pytest tests/ -v --integration
+
+# 运行全部测试
+python -m pytest tests/ -v --integration
+
+# 仅跑特定测试
+python -m pytest tests/test_cli.py -v
+python -m pytest tests/test_pure.py -v -k "test_parse_chapters"
 ```
+
+### 测试架构
+
+测试分两层：
+- **单元测试**（默认）— mock 掉所有外部依赖，纯逻辑验证，1.2s 跑完
+- **集成测试**（`--integration` 标志）— 需要 ffmpeg 和真实视频文件
 
 ## 许可证
 
