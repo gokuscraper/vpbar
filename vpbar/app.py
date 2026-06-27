@@ -18,7 +18,7 @@ SCRUBBER_CHOICES = ["无", "默认 (scrubber_final.gif)", *[s[0] for s in SCRUBB
 st.set_page_config(page_title="视频进度条生成器", page_icon="🎬", layout="wide")
 
 for k, v in dict(video_path="", video_duration=0.0, srt_path="", srt_content="",
-                 chapters_text="", output_path="", gif_path="").items():
+                 chapters_text="", output_path="", gif_path="", pro_step="① 转写").items():
     st.session_state.setdefault(k, v)
 
 # ── Title & upload ──
@@ -140,10 +140,14 @@ with qt:
 # ════════════════════════════════════
 with pt:
     st.subheader("专业模式 — 三步工作流")
-    t1, t2, t3 = st.tabs(["① 转写", "② 章节", "③ 渲染"])
+    step = st.segmented_control(
+        "步骤", ["① 转写", "② 章节", "③ 渲染"],
+        default="① 转写", key="pro_step",
+        label_visibility="collapsed",
+    )
+    st.divider()
 
-    # ── Step 1: Transcribe ──
-    with t1:
+    if step == "① 转写":
         p1e = st.selectbox("转写引擎", ["funasr", "whisper"], key="p1e")
         is_whisper = p1e == "whisper"
         p1m = st.selectbox("Whisper 模型", WHISPER_MODELS, key="p1m", disabled=not is_whisper)
@@ -152,7 +156,7 @@ with pt:
         p1c = st.selectbox("计算类型", ["default", "float16", "int8"], key="p1c",
                           disabled=not is_whisper, help=None if is_whisper else "仅 Whisper 支持")
 
-        st.info("已有字幕？前往 **② 章节** 页签直接上传 SRT 文件")
+        st.info("已有字幕？点击上方 **② 章节** 直接上传 SRT 文件")
 
         if st.button("开始转写", type="primary", key="p1b"):
             srt_out = str(TEMP_DIR / f"{Path(uploaded_file.name).stem}.srt")
@@ -167,8 +171,7 @@ with pt:
                 st.session_state.srt_content = Path(srt_out).read_text(encoding="utf-8")
                 st.success(f"转写完成 → {srt_out}")
 
-    # ── Step 2: Chapters ──
-    with t2:
+    elif step == "② 章节":
         up_srt = st.file_uploader("上传 SRT 文件", type=["srt"], key="p2srt")
         if up_srt:
             st.session_state.srt_path = save_upload(up_srt)
@@ -218,14 +221,14 @@ with pt:
                     use_container_width=True,
                     key="p2tbl",
                 )
-                if st.button("确认章节", key="p2cf"):
+                if st.button("确认章节", type="primary", key="p2cf"):
                     st.session_state.chapters_text = fmt_chapters(edited)
-                    st.toast(f"已确认 {len(edited)} 个章节", icon="✅")
+                    st.session_state.pro_step = "③ 渲染"
+                    st.rerun()
 
             st.text_area("章节文本（也可直接粘贴）", st.session_state.chapters_text, height=130, key="p2raw")
 
-    # ── Step 3: Render ──
-    with t3:
+    elif step == "③ 渲染":
         c1, c2 = st.columns(2)
         with c1:
             p3s = st.selectbox("样式", STYLE_DISPLAY_NAMES, index=STYLE_DISPLAY_NAMES.index(DEFAULT_STYLE_DISPLAY), key="p3s")
