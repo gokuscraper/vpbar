@@ -140,6 +140,84 @@ def _get_onnx_model_dir(cache_dir: str) -> str:
     return onnx_dir
 
 
+_punc_model = None
+
+def _add_punctuation(text: str) -> str:
+    global _punc_model
+    if _punc_model is None:
+        from funasr import AutoModel
+        _punc_model = AutoModel(model='ct-punc', device='cpu', disable_update=True)
+    result = _punc_model.generate(input=text)
+    return result[0]['text'] if result else text
+
+
+def _split_text_by_punctuation(text: str, start: float, end: float) -> list[dict]:
+    import re
+    if not text.strip():
+        return []
+    text = _add_punctuation(text)
+    # Split by sentence-ending punctuation
+    parts = re.split(r'(?<=[。！？；.!?;])', text)
+    parts = [p.strip() for p in parts if p.strip()]
+    if len(parts) <= 1:
+        return [{"start": start, "end": end, "text": text}]
+    dur = end - start
+    total_chars = sum(len(p) for p in parts)
+    if total_chars == 0:
+        return [{"start": start, "end": end, "text": text}]
+    entries = []
+    acc = 0.0
+    for i, p in enumerate(parts):
+        weight = len(p) / total_chars
+        if i == len(parts) - 1:
+            seg_end = end
+        else:
+            seg_end = round(start + (acc + weight) * dur, 3)
+        entries.append({"start": round(start + acc * dur, 3), "end": seg_end, "text": p})
+        acc += weight
+    return entries
+
+
+def _split_text_by_duration(text: str, start: float, end: float, target_dur: float = 4.0) -> list[dict]:
+    """Split text into roughly equal-time subtitles, targeting ~target_dur seconds each."""
+    dur = end - start
+    if dur <= target_dur * 1.2:
+        return [{"start": start, "end": end, "text": text.strip()}] if text.strip() else []
+    n = max(2, round(dur / target_dur))
+    chunk_size = max(1, len(text) // n)
+    parts = []
+    pos = 0
+    while pos < len(text):
+        end_pos = pos + chunk_size
+        if end_pos >= len(text):
+            parts.append(text[pos:].strip())
+            break
+        # Try to break at a space or word boundary near chunk_size
+        lookahead = text[end_pos:end_pos + 8]
+        space_idx = -1
+        for j, ch in enumerate(lookahead):
+            if ch == ' ':
+                space_idx = j
+                break
+        if space_idx >= 0:
+            parts.append(text[pos:end_pos + space_idx].strip())
+            pos = end_pos + space_idx + 1
+        else:
+            # Force break at chunk boundary
+            parts.append(text[pos:end_pos].strip())
+            pos = end_pos
+    parts = [p for p in parts if p]
+    if not parts:
+        return [{"start": start, "end": end, "text": text.strip()}]
+    chunk_dur = dur / len(parts)
+    entries = []
+    for i, p in enumerate(parts):
+        seg_start = round(start + i * chunk_dur, 3)
+        seg_end = round(start + (i + 1) * chunk_dur, 3) if i < len(parts) - 1 else end
+        entries.append({"start": seg_start, "end": seg_end, "text": p})
+    return entries
+
+
 def _transcribe_funasr(
     audio_path: str,
     srt_path: str,
@@ -214,14 +292,14 @@ def _transcribe_funasr(
             result = asr_model([seg_path], language="auto", use_itn=True)
             text = rich_transcription_postprocess(result[0]) if result else ""
             if text.strip():
-                entries.append({"start": start_ms / 1000.0, "end": end_ms / 1000.0, "text": text.strip()})
+                entries.extend(_split_text_by_punctuation(text.strip(), start_ms / 1000.0, end_ms / 1000.0))
     else:
         print("No VAD segments, transcribing full audio...")
         result = asr_model([audio_path], language="auto", use_itn=True)
         text = rich_transcription_postprocess(result[0]) if result else ""
         if text.strip():
             audio_duration = _get_audio_duration(audio_path)
-            entries.append({"start": 0, "end": audio_duration, "text": text.strip()})
+            entries.extend(_split_text_by_punctuation(text.strip(), 0.0, audio_duration))
 
     if not entries:
         print("No valid segments from FunASR", file=__import__('sys').stderr)
