@@ -173,7 +173,7 @@ with pt:
         with c1:
             p1_clicked = st.button("开始转写", type="primary", use_container_width=True, key="p1b")
         with c2:
-            if (p1_clicked or st.session_state.srt_content) and st.button("下一步 → ② 章节", use_container_width=True, key="p1_next"):
+            if st.session_state.srt_content and st.button("下一步 → ② 章节", use_container_width=True, key="p1_next"):
                 st.session_state.pro_step = "② 章节"
                 st.rerun()
 
@@ -190,6 +190,9 @@ with pt:
             if rc == 0:
                 st.session_state.srt_path = srt_out
                 st.session_state.srt_content = Path(srt_out).read_text(encoding="utf-8")
+                st.rerun()
+        elif st.session_state.srt_content:
+            st.success("✅ 转写完成，点击上方「下一步 → ② 章节」继续")
 
     elif st.session_state.pro_step == "② 章节":
         up_srt = st.file_uploader("上传 SRT 文件", type=["srt"], key="p2srt")
