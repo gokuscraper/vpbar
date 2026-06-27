@@ -271,7 +271,7 @@ with pt:
                 if p3_gif_path:
                     st.image(p3_gif_path, width=100)
         p3sg = st.number_input("分段间隔 (秒, 0=自动)", value=0, key="p3sg")
-        p3dw = st.number_input("分隔线宽度", value=0, min_value=0, key="p3dw",
+        p3dw = st.number_input("分隔线宽度", value=3, min_value=0, key="p3dw",
                                help="0 = 不显示分隔线")
         p3dr = st.slider("分隔线高度比例", 0.0, 1.0, 0.8, key="p3dr")
 
