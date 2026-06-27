@@ -110,11 +110,11 @@ def save_upload(uploaded) -> str:
 
 def parse_chapters(text: str) -> list[dict]:
     items = []
-    for line in text.strip().split("\n"):
-        line = line.strip()
-        if not line:
+    for part in text.strip().replace("\n", ",").split(","):
+        part = part.strip()
+        if not part:
             continue
-        m = re.match(r"(\d+\.?\d*)\s*-\s*(\d+\.?\d*)\s*:\s*(.+)", line)
+        m = re.match(r"(\d+\.?\d*)\s*-\s*(\d+\.?\d*)\s*:\s*(.+)", part)
         if m:
             items.append({"start": float(m.group(1)), "end": float(m.group(2)), "label": m.group(3)})
     return items
