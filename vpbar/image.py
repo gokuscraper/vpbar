@@ -11,12 +11,17 @@ except ImportError:
 from vpbar.fonts import prepare_fonts
 
 
+def _parse_hex(color: str) -> tuple[int, int, int]:
+    color = color.lstrip("#")
+    if len(color) != 6:
+        raise ValueError(f"Invalid hex color '{color}': must be 6 hex digits")
+    return (int(color[0:2], 16), int(color[2:4], 16), int(color[4:6], 16))
+
+
 def create_rounded_rect(width: int, height: int, color: str, alpha: float, radius: int, output_path: str):
     if not PIL_AVAILABLE:
         raise ImportError("PIL/Pillow is required for rounded corners. Install with: pip install Pillow")
-    r = int(color[0:2], 16)
-    g = int(color[2:4], 16)
-    b = int(color[4:6], 16)
+    r, g, b = _parse_hex(color)
     a = int(alpha * 255)
     img = Image.new('RGBA', (width, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
@@ -31,9 +36,7 @@ def create_gradient_bar(width: int, height: int, colors: list, alpha: float = 1.
     draw = ImageDraw.Draw(img)
     rgb_colors = []
     for color in colors:
-        r = int(color[0:2], 16)
-        g = int(color[2:4], 16)
-        b = int(color[4:6], 16)
+        r, g, b = _parse_hex(color)
         rgb_colors.append((r, g, b, int(alpha * 255)))
     num_segments = len(rgb_colors)
     segment_width = width // num_segments
@@ -68,9 +71,7 @@ def create_rounded_bar_with_text(
 ):
     if not PIL_AVAILABLE:
         raise ImportError("PIL/Pillow is required for rounded corners")
-    r = int(color[0:2], 16)
-    g = int(color[2:4], 16)
-    b = int(color[4:6], 16)
+    r, g, b = _parse_hex(color)
     a = int(alpha * 255)
     img = Image.new('RGBA', (width, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)

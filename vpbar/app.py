@@ -9,7 +9,7 @@ from vpbar.gui_utils import (
     PROJECT_ROOT, STYLE_DISPLAY_NAMES, DEFAULT_STYLE_DISPLAY, resolve_style_name,
     TEMP_DIR, SCRUBBER_DIR, SCRUBBER_DEFAULT,
     WHISPER_MODELS, get_video_duration, estimate_eta, run_cli_streaming,
-    save_upload, parse_chapters, fmt_chapters, hex_no_hash, list_scrubbers,
+    save_upload, parse_chapters, fmt_chapters, list_scrubbers,
 )
 
 SCRUBBERS = list_scrubbers()  # [(name, path), ...]
