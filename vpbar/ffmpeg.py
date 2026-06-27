@@ -108,12 +108,13 @@ def build_bar_command(
             if not chapter.get('label'):
                 continue
             mid_time = (chapter['start'] + chapter['end']) / 2
-            text_x = int(width * (mid_time / duration))
-            text_y_offset = height // 2 - font_size // 4
+            text_x = width * (mid_time / duration)
+            text_y_offset = height // 2 - font_size // 2
             text_y = f"{bar_y}+{text_y_offset}"
             draw_commands.append(
                 f"drawtext=text='{chapter['label']}':fontcolor=black:fontsize={font_size}:"
-                f"x={text_x}:y={text_y}:fontfile={font_path_str}:shadowcolor=white@0.8:shadowx=1:shadowy=1"
+                f"x={text_x}-text_w/2:y={text_y}:fontfile={font_path_str}:"
+                f"shadowcolor=white@0.8:shadowx=1:shadowy=1"
             )
         if draw_commands:
             draw_filter = ",".join(draw_commands)
