@@ -61,7 +61,7 @@ def build_chapters_subparser(subparsers):
     gen_parser.add_argument("-o", "--output", type=str, default=None, help="Save chapters to file")
     gen_parser.add_argument("--min-chapters", type=int, default=2, help="Minimum chapters")
     gen_parser.add_argument("--max-chapters", type=int, default=4, help="Maximum chapters")
-    gen_parser.add_argument("--max-label-length", type=int, default=5, help="Max label characters")
+    gen_parser.add_argument("--max-label-length", type=int, default=7, help="Max label characters")
     return gen_parser
 
 
