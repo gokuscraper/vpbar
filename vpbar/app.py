@@ -145,9 +145,12 @@ with pt:
     # ── Step 1: Transcribe ──
     with t1:
         p1e = st.selectbox("转写引擎", ["funasr", "whisper"], key="p1e")
-        p1m = st.selectbox("Whisper 模型", WHISPER_MODELS, key="p1m", disabled=(p1e != "whisper"))
-        p1d = st.radio("设备", ["auto", "cuda", "cpu"], horizontal=True, key="p1d")
-        p1c = st.selectbox("计算类型", ["default", "float16", "int8"], key="p1c")
+        is_whisper = p1e == "whisper"
+        p1m = st.selectbox("Whisper 模型", WHISPER_MODELS, key="p1m", disabled=not is_whisper)
+        p1d = st.radio("设备", ["auto", "cuda", "cpu"], horizontal=True, key="p1d",
+                       disabled=not is_whisper, help=None if is_whisper else "FunASR 固定使用 CPU")
+        p1c = st.selectbox("计算类型", ["default", "float16", "int8"], key="p1c",
+                          disabled=not is_whisper, help=None if is_whisper else "仅 Whisper 支持")
 
         up_srt = st.file_uploader("或直接上传已有 SRT", type=["srt"], key="p1srt")
         if up_srt:
