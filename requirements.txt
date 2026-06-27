@@ -1,0 +1,9 @@
+faster-whisper>=1.0.0
+funasr>=1.0.0
+funasr-onnx>=0.4.0
+modelscope>=1.9.0
+torch>=2.0.0
+Pillow>=10.0.0
+openai>=1.0.0
+streamlit>=1.37.0
+python-dotenv>=1.0.0

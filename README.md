@@ -6,7 +6,8 @@
 
 - ✅ **双层动态进度条**：支持圆角/平角、渐变色、分段、章节标记
 - ✅ **AI 章节自动生成**：根据字幕内容自动分章，命名清晰通顺
-- ✅ **Whisper 语音转写**：一键从视频音频转录字幕，支持 GPU/CPU
+- ✅ **Whisper / FunASR 语音转写**：一键从视频音频转录字幕，支持 GPU/CPU，FunASR 快 3 倍且有标点
+- ✅ **Streamlit GUI**：图形界面，支持双模式（快速/专业）、87种 GIF 拖拽头、一键生成
 - ✅ **多种样式**：位置（顶部/中间/底部）、颜色、透明度、高度可配置
 - ✅ **拖拽头动画**：支持 GIF 拖拽头，增强视觉效果
 - ✅ **自动检测**：自动获取视频时长和分辨率
@@ -166,6 +167,7 @@ vpbar progress add video.mp4 \
 
 **说明：**
 - FunASR + ct-punc（标点断句模型）加标点后按句切分，字幕从 30 条粗糙大段变成 103 条合理短句，平均 4.6s/条，适合展示。ct-punc 推理仅 ~0.1s/段，30 段共 ~3s，加载约 20s。
+- FunASR ONNX GPU 测试：在 RTX 3050 Laptop 上 GPU vs CPU 推理时间几乎无差异（~1-2s vs ~2-3s），因为 200M 模型的计算量太小，瓶颈在 ffmpeg 音频分段提取而非推理。GPU 仅在大模型（Whisper large-v3）或批量场景才有收益。
 - FunASR 模型仅 200M 参数，Whisper 1.5B 参数，后者天生的慢。
 - FunASR 错误倾向：英文/技术词（"hook客" → "hook"、"搜售platform" → "social platform"）
 - Whisper 错误倾向：中文同音字（"败花钱" → "白花钱"、"调调控控" → "条条框框"）
@@ -309,11 +311,19 @@ L:\视频进度条\
 │   ├── llm.py                   # LLM API 调用
 │   ├── progress.py              # 进度条逻辑
 │   ├── srt.py                   # SRT 字幕解析
-│   ├── transcribe.py            # Whisper 语音转写
-│   └── scrubber.py              # GIF 拖拽头处理
+│   ├── transcribe.py            # 语音转写（Whisper + FunASR）
+│   ├── scrubber.py              # GIF 拖拽头处理
+│   ├── gif.py                   # GIF 生成
+│   ├── fonts.py                 # 字体管理
+│   ├── app.py                   # Streamlit GUI 入口
+│   └── gui_utils.py             # GUI 纯函数工具
+├── .streamlit/                  # Streamlit 配置
+│   └── config.toml
 ├── models/                      # Whisper 模型缓存
 ├── config.json                  # 样式配置
 ├── styles.json                  # 样式定义
+├── scrubbers/                   # GIF 拖拽头模板库（87种）
+├── requirements.txt             # Python 依赖清单
 ├── pyproject.toml               # 项目配置与依赖
 └── README.md                    # 本文档
 ```
