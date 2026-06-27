@@ -140,9 +140,9 @@ with qt:
 # ════════════════════════════════════
 with pt:
     st.subheader("专业模式 — 三步工作流")
-    step = st.segmented_control(
+    step = st.radio(
         "步骤", ["① 转写", "② 章节", "③ 渲染"],
-        default="① 转写", key="pro_step",
+        index=0, key="pro_step", horizontal=True,
         label_visibility="collapsed",
     )
     st.divider()
