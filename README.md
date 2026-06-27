@@ -48,7 +48,7 @@ python add_progress_bar.py input.mp4
 alias add-progress="python /path/to/add_progress_bar.py"
 
 # Windows (PowerShell)
-function add-progress { python L:\视频进度条\add_progress_bar.py $args }
+function add-progress { python L:\vpbaradd_progress_bar.py $args }
 ```
 
 ## 使用方法
@@ -301,7 +301,7 @@ python add_progress_bar.py video.mp4 -p top --bg-color 000000 --fg-color 00FF00
 ### 项目结构
 
 ```
-L:\视频进度条\
+L:\vpbar
 ├── vpbar/                       # 核心模块
 │   ├── cli.py                   # CLI 入口与子命令
 │   ├── config.py                # 配置加载
