@@ -121,7 +121,7 @@ def parse_chapters(text: str) -> list[dict]:
 
 
 def fmt_chapters(items: list[dict]) -> str:
-    return "\n".join(f"{int(i['start'])}-{int(i['end'])}: {i['label']}" for i in items)
+    return ",".join(f"{int(i['start'])}-{int(i['end'])}:{i['label']}" for i in items)
 
 
 def hex_no_hash(c: str) -> str:
