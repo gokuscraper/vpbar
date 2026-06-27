@@ -247,18 +247,7 @@ with pt:
             p3p = st.radio("位置", ["bottom", "top", "middle"], horizontal=True, key="p3p")
         p3h = st.slider("高度 (px)", 3, 50, 10, key="p3h")
 
-        ccc1, ccc2, ccc3, ccc4 = st.columns(4)
-        with ccc1:
-            p3bg = st.color_picker("背景色", "#808080", key="p3bg")
-        with ccc2:
-            p3fg = st.color_picker("前景色", "#333333", key="p3fg")
-        with ccc3:
-            p3ba = st.slider("背景透明度", 0.0, 1.0, 0.4, key="p3ba")
-        with ccc4:
-            p3fa = st.slider("前景透明度", 0.0, 1.0, 0.7, key="p3fa")
-
         p3cr = st.slider("圆角 (px)", 0, 25, 4, key="p3cr")
-        p3gr = st.text_input("渐变色（逗号分隔, 如 FF0000,00FF00）", key="p3gr")
         p3gf = st.checkbox("GIF 拖拽头", value=True, key="p3gf")
         p3_gif_path = ""
         p3_gif_up = None
@@ -282,7 +271,8 @@ with pt:
                 if p3_gif_path:
                     st.image(p3_gif_path, width=100)
         p3sg = st.number_input("分段间隔 (秒, 0=自动)", value=0, key="p3sg")
-        p3dw = st.number_input("分隔线宽度", value=3, min_value=0, key="p3dw")
+        p3dw = st.number_input("分隔线宽度", value=0, min_value=0, key="p3dw",
+                               help="0 = 不显示分隔线")
         p3dr = st.slider("分隔线高度比例", 0.0, 1.0, 0.8, key="p3dr")
 
         if st.button("开始渲染", type="primary", use_container_width=True, key="p3r"):
@@ -292,13 +282,8 @@ with pt:
 
             cmd = ["progress", "add", st.session_state.video_path, "-o", out_path,
                    "--style", resolve_style_name(p3s), "--position", p3p, "--height", str(p3h),
-                   "--bg-color", hex_no_hash(p3bg), "--fg-color", hex_no_hash(p3fg),
-                   "--bg-alpha", str(p3ba), "--fg-alpha", str(p3fa),
                    "--corner-radius", str(p3cr), "--segment-interval", str(p3sg),
                    "--divider-width", str(p3dw), "--divider-height-ratio", str(p3dr)]
-
-            if p3gr.strip():
-                cmd += ["--gradient", p3gr.strip()]
 
             if p3gf and p3_gif_path:
                 cmd += ["--scrubber-image", p3_gif_path]
