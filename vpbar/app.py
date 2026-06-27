@@ -53,9 +53,8 @@ with col_r:
     op = st.session_state.output_path
     if op and os.path.isfile(op):
         st.video(op)
-        with open(op, "rb") as fb:
-            st.download_button("下载成品视频", fb, file_name=Path(op).name,
-                               mime="video/mp4", use_container_width=True)
+        st.download_button("下载成品视频", open(op, "rb").read(), file_name=Path(op).name,
+                           mime="video/mp4", use_container_width=True)
     else:
         st.info("生成后这里显示结果")
 
