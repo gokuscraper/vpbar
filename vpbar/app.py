@@ -173,7 +173,7 @@ with pt:
         with c1:
             p1_clicked = st.button("开始转写", type="primary", use_container_width=True, key="p1b")
         with c2:
-            if st.session_state.srt_content and st.button("下一步 → ② 章节", use_container_width=True, key="p1_next"):
+            if (p1_clicked or st.session_state.srt_content) and st.button("下一步 → ② 章节", use_container_width=True, key="p1_next"):
                 st.session_state.pro_step = "② 章节"
                 st.rerun()
 
