@@ -169,7 +169,17 @@ with pt:
 
         st.info("已有字幕？点击上方 **② 章节** 直接上传 SRT 文件")
 
-        if st.button("开始转写", type="primary", key="p1b"):
+        c1, c2 = st.columns(2)
+        with c1:
+            p1_clicked = st.button("开始转写", type="primary", use_container_width=True, key="p1b")
+        with c2:
+            if st.session_state.srt_content and st.button("下一步 → ② 章节", use_container_width=True, key="p1_next"):
+                st.session_state.pro_step = "② 章节"
+                st.rerun()
+
+        st.divider()
+
+        if p1_clicked:
             srt_out = str(TEMP_DIR / f"{Path(uploaded_file.name).stem}.srt")
             cmd = ["transcribe", st.session_state.video_path, "-o", srt_out,
                    "--engine", p1e, "--model", p1m, "--device", p1d, "--compute-type", p1c]
@@ -180,7 +190,6 @@ with pt:
             if rc == 0:
                 st.session_state.srt_path = srt_out
                 st.session_state.srt_content = Path(srt_out).read_text(encoding="utf-8")
-                st.success(f"转写完成 → {srt_out}")
 
     elif st.session_state.pro_step == "② 章节":
         up_srt = st.file_uploader("上传 SRT 文件", type=["srt"], key="p2srt")
