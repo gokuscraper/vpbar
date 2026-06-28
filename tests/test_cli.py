@@ -79,7 +79,7 @@ class TestHelpAndVersion:
     def test_version(self, capsys):
         with pytest.raises(SystemExit):
             main(["--version"])
-        assert "vpbar 0.1.0" in capsys.readouterr().out
+        assert f"vpbar {_get_version()}" in capsys.readouterr().out
 
     def test_progress_add_help(self, capsys):
         with pytest.raises(SystemExit):
