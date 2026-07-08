@@ -11,5 +11,6 @@ models/
 docs/
 .streamlit/
 tests/fixtures/output/
+test_outputs/
 fonts/SourceHanSerifSC-Regular.otf
 fonts/OpenSans-Regular.ttf
