@@ -71,7 +71,7 @@ def _transcribe_whisper(
 ) -> str | None:
     try:
         from faster_whisper import WhisperModel
-    except ImportError:
+    except ImportError as e:
         print(f"faster-whisper not installed ({e}). Run: pip install faster-whisper", file=__import__('sys').stderr)
         return None
 
@@ -227,7 +227,7 @@ def _transcribe_funasr(
 ) -> str | None:
     try:
         from funasr import AutoModel
-    except ImportError:
+    except ImportError as e:
         print(f"funasr not installed ({e}). Run: pip install funasr", file=__import__('sys').stderr)
         return None
 
@@ -259,7 +259,7 @@ def _transcribe_funasr(
     try:
         from funasr_onnx import SenseVoiceSmall as OnnxSenseVoice
         from funasr_onnx.utils.postprocess_utils import rich_transcription_postprocess
-    except ImportError:
+    except ImportError as e:
         print(f"funasr-onnx not installed ({e}). Run: pip install funasr-onnx", file=__import__('sys').stderr)
         return None
 

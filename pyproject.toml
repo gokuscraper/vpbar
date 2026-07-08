@@ -15,6 +15,7 @@ dependencies = [
     "modelscope>=1.9.0",
     "streamlit>=1.37.0",
     "torch>=2.0.0",
+    "torchaudio>=2.0.0",
 ]
 
 [project.scripts]
