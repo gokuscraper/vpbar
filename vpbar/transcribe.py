@@ -159,10 +159,18 @@ _punc_model = None
 def _add_punctuation(text: str) -> str:
     global _punc_model
     if _punc_model is None:
-        from funasr import AutoModel
-        _punc_model = AutoModel(model='ct-punc', device='cpu', disable_update=True)
-    result = _punc_model.generate(input=text)
-    return result[0]['text'] if result else text
+        try:
+            from funasr import AutoModel
+            _punc_model = AutoModel(model='ct-punc', device='cpu', disable_update=True)
+        except Exception as e:
+            print(f"Punctuation model unavailable, skipping: {e}", file=__import__('sys').stderr)
+            return text
+    try:
+        result = _punc_model.generate(input=text)
+        return result[0]['text'] if result else text
+    except Exception as e:
+        print(f"Punctuation inference failed, skipping: {e}", file=__import__('sys').stderr)
+        return text
 
 
 def _split_text_by_punctuation(text: str, start: float, end: float) -> list[dict]:
