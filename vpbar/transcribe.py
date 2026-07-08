@@ -136,7 +136,7 @@ def _get_onnx_model_dir(cache_dir: str) -> str:
     bpe_file = "chn_jpn_yue_eng_ko_spectok.bpe.model"
     if not os.path.isfile(os.path.join(onnx_dir, bpe_file)):
         # Check bundled BPE in repo first (no download needed)
-        repo_root = os.path.dirname(os.path.dirname(__file__))
+        repo_root = os.path.dirname(__file__)
         bundled_bpe = os.path.join(repo_root, "models", "bpe", bpe_file)
         if os.path.isfile(bundled_bpe):
             import shutil
