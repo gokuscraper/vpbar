@@ -1,5 +1,6 @@
 """Video transcription engines: Whisper and FunASR."""
 
+import gc
 import os
 import subprocess
 import tempfile
@@ -289,6 +290,8 @@ def _transcribe_funasr(
             print(f"VAD detected {len(vad_segments)} speech segments")
         else:
             print("VAD detected no speech segments, will use full duration")
+        del vad_model, vad_result
+        gc.collect()
 
     # Step 2: ASR per VAD segment with ONNX quantized SenseVoiceSmall
     try:
@@ -314,36 +317,40 @@ def _transcribe_funasr(
     temp_dir = os.path.join(tempfile.gettempdir(), "deveco", "segments")
     os.makedirs(temp_dir, exist_ok=True)
 
-    entries = []
-    if vad_segments:
-        print(f"Extracting and transcribing {len(vad_segments)} segments...")
-        for i, (start_ms, end_ms) in enumerate(vad_segments):
-            seg_path = os.path.join(temp_dir, f"seg_{i:03d}.wav")
-            dur_s = (end_ms - start_ms) / 1000.0
-            subprocess.run(
-                ["ffmpeg", "-y", "-ss", f"{start_ms/1000:.3f}", "-i", audio_path,
-                 "-t", f"{dur_s:.3f}", "-vn", "-acodec", "pcm_s16le",
-                 "-ar", "16000", "-ac", "1", seg_path],
-                capture_output=True, check=True
-            )
-            result = asr_model([seg_path], language="auto", use_itn=True)
+    try:
+        entries = []
+        if vad_segments:
+            print(f"Extracting and transcribing {len(vad_segments)} segments...")
+            for i, (start_ms, end_ms) in enumerate(vad_segments):
+                seg_path = os.path.join(temp_dir, f"seg_{i:03d}.wav")
+                dur_s = (end_ms - start_ms) / 1000.0
+                subprocess.run(
+                    ["ffmpeg", "-y", "-ss", f"{start_ms/1000:.3f}", "-i", audio_path,
+                     "-t", f"{dur_s:.3f}", "-vn", "-acodec", "pcm_s16le",
+                     "-ar", "16000", "-ac", "1", seg_path],
+                    capture_output=True, check=True
+                )
+                result = asr_model([seg_path], language="auto", use_itn=True)
+                text = rich_transcription_postprocess(result[0]) if result else ""
+                if text.strip():
+                    entries.extend(_split_text_by_punctuation(text.strip(), start_ms / 1000.0, end_ms / 1000.0))
+        else:
+            print("No VAD segments, transcribing full audio...")
+            result = asr_model([audio_path], language="auto", use_itn=True)
             text = rich_transcription_postprocess(result[0]) if result else ""
             if text.strip():
-                entries.extend(_split_text_by_punctuation(text.strip(), start_ms / 1000.0, end_ms / 1000.0))
-    else:
-        print("No VAD segments, transcribing full audio...")
-        result = asr_model([audio_path], language="auto", use_itn=True)
-        text = rich_transcription_postprocess(result[0]) if result else ""
-        if text.strip():
-            audio_duration = _get_audio_duration(audio_path)
-            entries.extend(_split_text_by_punctuation(text.strip(), 0.0, audio_duration))
+                audio_duration = _get_audio_duration(audio_path)
+                entries.extend(_split_text_by_punctuation(text.strip(), 0.0, audio_duration))
 
-    if not entries:
-        print("No valid segments from FunASR", file=__import__('sys').stderr)
+        if not entries:
+            print("No valid segments from FunASR", file=__import__('sys').stderr)
+            return None
+
+        print(f"Created {len(entries)} SRT entries")
+        return _write_srt(srt_path, entries)
+    except Exception as e:
+        print(f"FunASR pipeline crashed: {e}", file=__import__('sys').stderr)
         return None
-
-    print(f"Created {len(entries)} SRT entries")
-    return _write_srt(srt_path, entries)
 
 
 def video_to_srt(
