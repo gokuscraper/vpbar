@@ -138,10 +138,11 @@ def _get_onnx_model_dir(cache_dir: str) -> str:
         pt_dir = os.path.join(cache_dir, "models", "iic", "SenseVoiceSmall")
         src = os.path.join(pt_dir, bpe_file)
         if not os.path.isfile(src):
-            print("Downloading PyTorch model for BPE tokenizer...")
+            print("Downloading BPE tokenizer model...")
             try:
                 from modelscope.hub.snapshot_download import snapshot_download
-                pt_path = snapshot_download("iic/SenseVoiceSmall", cache_dir=cache_dir)
+                pt_path = snapshot_download("iic/SenseVoiceSmall", cache_dir=cache_dir,
+                                            allow_patterns=["**/*.bpe*"])
                 if pt_path and os.path.isdir(pt_path):
                     src = os.path.join(pt_path, bpe_file)
             except Exception as e:
