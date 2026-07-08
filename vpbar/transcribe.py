@@ -121,7 +121,7 @@ def _get_audio_duration(audio_path: str) -> float:
 
 def _get_onnx_model_dir(cache_dir: str) -> str:
     """Return path to ONNX quantized model, auto-download if missing."""
-    onnx_dir = os.path.join(cache_dir, "iic", "SenseVoiceSmall-onnx")
+    onnx_dir = os.path.join(cache_dir, "models", "iic", "SenseVoiceSmall-onnx")
     if not os.path.isdir(onnx_dir):
         print("Downloading ONNX quantized model from ModelScope...")
         try:
