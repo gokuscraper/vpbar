@@ -167,6 +167,13 @@ _punc_model = None
 def _add_punctuation(text: str) -> str:
     global _punc_model
     if _punc_model is None:
+        # Check if ct-punc model is cached before loading (avoid triggering download)
+        ct_punc_id = "iic--punc_ct-transformer_cn-en-common-vocab471067-large"
+        cache_dir = os.environ.get("MODELSCOPE_CACHE",
+                                   os.path.join(os.path.expanduser("~"), ".cache", "modelscope", "hub"))
+        ct_punc_path = os.path.join(cache_dir, "models", ct_punc_id)
+        if not os.path.isdir(ct_punc_path):
+            return text  # model not cached, skip punctuation restoration
         try:
             from funasr import AutoModel
             _punc_model = AutoModel(model='ct-punc', device='cpu', disable_update=True)
