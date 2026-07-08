@@ -126,7 +126,9 @@ def _get_onnx_model_dir(cache_dir: str) -> str:
         print("Downloading ONNX quantized model from ModelScope...")
         try:
             from modelscope.hub.snapshot_download import snapshot_download
-            snapshot_download("iic/SenseVoiceSmall-onnx", cache_dir=cache_dir)
+            snapshot_path = snapshot_download("iic/SenseVoiceSmall-onnx", cache_dir=cache_dir)
+            if snapshot_path and os.path.isdir(snapshot_path):
+                onnx_dir = snapshot_path
         except Exception as e:
             print(f"Failed to download ONNX model: {e}", file=__import__('sys').stderr)
             return ""
