@@ -11,6 +11,16 @@ MAX_RETRIES = 2
 
 
 def _get_api_key() -> str:
+    key = os.environ.get("OPENCODE_API_KEY")
+    if key:
+        return key
+    try:
+        import streamlit as st
+        key = st.secrets.get("OPENCODE_API_KEY", "")
+        if key:
+            return key
+    except Exception:
+        pass
     env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
     if os.path.isfile(env_path):
         with open(env_path) as f:
