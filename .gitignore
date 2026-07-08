@@ -6,3 +6,10 @@ dist/
 build/
 models/
 .env
+.pytest_cache/
+.superpowers/
+docs/
+.streamlit/
+tests/fixtures/output/
+fonts/SourceHanSerifSC-Regular.otf
+fonts/OpenSans-Regular.ttf
