@@ -1,27 +1,10 @@
-# vpbar · Video Progress Bar Generator
+﻿# vpbar · Video Progress Bar Generator
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE) [![Python](https://img.shields.io/badge/Python-3.8+-brightgreen)]() [![Tests](https://img.shields.io/badge/Tests-96%20passed-brightgreen)]() [![CLI](https://img.shields.io/badge/CLI-yt--dlp%20style-blue)]() [![GUI](https://img.shields.io/badge/GUI-Streamlit-red)]()
 
 Add Douyin-style dual-layer animated progress bars to videos. Supports FunASR / Whisper dual-engine transcription, AI chapter generation, 33 styles, 87 GIF scrubbers, and a Streamlit GUI.
 
 **Read this in:** [中文](README.md)
-
-## AI Agent Skill
-
-This repo bundles `.opencode/skills/vpbar/` — opencode-compatible tools (Claude Code, Codex, Gemini CLI) auto-detect it.
-
-```bash
-git clone <repo-url>
-cd vpbar
-pip install -e .
-
-# Then tell your AI:
-# "Use vpbar to add a progress bar to video.mp4, FunASR transcribe, AI chapters, style 小A"
-```
-
-The AI reads `.opencode/skills/vpbar/SKILL.md`, understands all subcommands, and executes directly.
-
-**To reuse in another project:** copy `.opencode/skills/vpbar/` to your own `.opencode/skills/`.
 
 ## ✅ When to use / ❌ When not to
 

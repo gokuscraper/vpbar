@@ -1,27 +1,10 @@
-# vpbar · 视频进度条生成器
+﻿# vpbar · 视频进度条生成器
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE) [![Python](https://img.shields.io/badge/Python-3.8+-brightgreen)]() [![Tests](https://img.shields.io/badge/Tests-96%20passed-brightgreen)]() [![CLI](https://img.shields.io/badge/CLI-yt--dlp%20style-blue)]() [![GUI](https://img.shields.io/badge/GUI-Streamlit-red)]()
 
 一键给视频添加抖音风格的双层动态进度条。支持 FunASR / Whisper 双引擎转写、AI 自动分章、33 种样式、87 种 GIF 拖拽头、Streamlit GUI。
 
 **English version:** [README.en.md](README.en.md)
-
-## 作为 AI Agent Skill 使用
-
-本仓库内置了 `.opencode/skills/vpbar/`，Claude Code / Codex / Gemini CLI 等 opencode 兼容工具会自动识别。
-
-```bash
-git clone <repo-url>
-cd vpbar
-pip install -e .
-
-# 然后对 AI 说：
-# 「用 vpbar 给 video.mp4 加进度条，FunASR 转写，AI 分章，样式用小A」
-```
-
-AI 会自动读取 `.opencode/skills/vpbar/SKILL.md`，理解全部子命令并执行。
-
-**从零新建项目引用：** 复制 `.opencode/skills/vpbar/` 到你的项目 `.opencode/skills/` 下即可。
 
 ## ✅ 适合 / ❌ 不适合
 
