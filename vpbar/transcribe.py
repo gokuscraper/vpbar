@@ -72,7 +72,7 @@ def _transcribe_whisper(
     try:
         from faster_whisper import WhisperModel
     except ImportError:
-        print("faster-whisper not installed. Run: pip install faster-whisper", file=__import__('sys').stderr)
+        print(f"faster-whisper not installed ({e}). Run: pip install faster-whisper", file=__import__('sys').stderr)
         return None
 
     if compute_type == "default":
@@ -228,7 +228,7 @@ def _transcribe_funasr(
     try:
         from funasr import AutoModel
     except ImportError:
-        print("funasr not installed. Run: pip install funasr", file=__import__('sys').stderr)
+        print(f"funasr not installed ({e}). Run: pip install funasr", file=__import__('sys').stderr)
         return None
 
     funasr_cache = _safe_cache_dir("funasr")
@@ -260,7 +260,7 @@ def _transcribe_funasr(
         from funasr_onnx import SenseVoiceSmall as OnnxSenseVoice
         from funasr_onnx.utils.postprocess_utils import rich_transcription_postprocess
     except ImportError:
-        print("funasr-onnx not installed. Run: pip install funasr-onnx", file=__import__('sys').stderr)
+        print(f"funasr-onnx not installed ({e}). Run: pip install funasr-onnx", file=__import__('sys').stderr)
         return None
 
     onnx_model_dir = _get_onnx_model_dir(funasr_cache)
