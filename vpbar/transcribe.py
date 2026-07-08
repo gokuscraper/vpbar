@@ -132,25 +132,33 @@ def _get_onnx_model_dir(cache_dir: str) -> str:
         except Exception as e:
             print(f"Failed to download ONNX model: {e}", file=__import__('sys').stderr)
             return ""
-    # Copy BPE model from PyTorch model directory if available
+    # Copy BPE model from bundled repo or PyTorch model directory
     bpe_file = "chn_jpn_yue_eng_ko_spectok.bpe.model"
     if not os.path.isfile(os.path.join(onnx_dir, bpe_file)):
-        pt_dir = os.path.join(cache_dir, "models", "iic", "SenseVoiceSmall")
-        src = os.path.join(pt_dir, bpe_file)
-        if not os.path.isfile(src):
-            print("Downloading BPE tokenizer model...")
-            try:
-                from modelscope.hub.snapshot_download import snapshot_download
-                pt_path = snapshot_download("iic/SenseVoiceSmall", cache_dir=cache_dir,
-                                            allow_patterns=["**/*.bpe*"])
-                if pt_path and os.path.isdir(pt_path):
-                    src = os.path.join(pt_path, bpe_file)
-            except Exception as e:
-                print(f"Failed to download BPE model: {e}", file=__import__('sys').stderr)
-        if os.path.isfile(src):
+        # Check bundled BPE in repo first (no download needed)
+        repo_root = os.path.dirname(os.path.dirname(__file__))
+        bundled_bpe = os.path.join(repo_root, "models", "bpe", bpe_file)
+        if os.path.isfile(bundled_bpe):
             import shutil
             os.makedirs(onnx_dir, exist_ok=True)
-            shutil.copy2(src, os.path.join(onnx_dir, bpe_file))
+            shutil.copy2(bundled_bpe, os.path.join(onnx_dir, bpe_file))
+        else:
+            pt_dir = os.path.join(cache_dir, "models", "iic", "SenseVoiceSmall")
+            src = os.path.join(pt_dir, bpe_file)
+            if not os.path.isfile(src):
+                print("Downloading BPE tokenizer model...")
+                try:
+                    from modelscope.hub.snapshot_download import snapshot_download
+                    pt_path = snapshot_download("iic/SenseVoiceSmall", cache_dir=cache_dir,
+                                                allow_patterns=["**/*.bpe*"])
+                    if pt_path and os.path.isdir(pt_path):
+                        src = os.path.join(pt_path, bpe_file)
+                except Exception as e:
+                    print(f"Failed to download BPE model: {e}", file=__import__('sys').stderr)
+            if os.path.isfile(src):
+                import shutil
+                os.makedirs(onnx_dir, exist_ok=True)
+                shutil.copy2(src, os.path.join(onnx_dir, bpe_file))
     return onnx_dir
 
 

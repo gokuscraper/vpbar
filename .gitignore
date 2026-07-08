@@ -5,6 +5,7 @@ __pycache__/
 dist/
 build/
 models/
+!vpbar/models/
 .env
 .pytest_cache/
 .superpowers/
